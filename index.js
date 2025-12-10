@@ -6,14 +6,13 @@ const httpStatus = require("http-status");
 // const fileUpload = require("express-fileupload");
 const globalErrorHandler = require("./src/Middleware/globalErrorHandler");
 const router = require("./src/routes");
-
 const createCorsOptions = require("./src/shared/corsOptions");
 const allowedOrigins = require("./src/constant/corsOrigin");
 const bodyParser = require("body-parser");
 
 const app = express();
 
-const corsOptions = createCorsOptions(allowedOrigins);
+const corsOptions = createCorsOptions(allowedOrigins, { credentials: true });
 
 app.use(cors(corsOptions));
 // app.use(fileUpload());

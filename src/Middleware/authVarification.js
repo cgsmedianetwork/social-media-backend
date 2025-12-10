@@ -7,7 +7,7 @@ const authVerification = async (req, res, next) => {
   const { authorization } = req.headers;
   const token = authorization?.split(" ")[1];
   try {
-    // console.log("first....: ", token);
+    // console.log("token and authorization: ", token, authorization);
     if (!token || !authorization) {
       throw new ErrorHandler("invalid token", httpStatus.BAD_REQUEST);
     }
@@ -33,8 +33,8 @@ const authVerification = async (req, res, next) => {
     req.userId = userId;
     next();
   } catch (error) {
-    // console.log(error);
-    next("Authentication Failed!");
+    console.log(error);
+    next(new ErrorHandler("Authentication Failed!", 401));
   }
 };
 

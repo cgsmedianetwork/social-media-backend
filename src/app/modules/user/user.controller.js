@@ -84,7 +84,7 @@ const loginUserUsingPhoneAndPassword = catchAsyncError(async (req, res) => {
     data: {
       userData,
       accessToken,
-      // refreshToken,
+      refreshToken,
     },
   });
 });

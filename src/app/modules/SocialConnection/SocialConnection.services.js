@@ -53,23 +53,75 @@ async function ensureYoutubeToken(userId) {
 async function fetchYoutubeInsights(userId) {
   const oauth2Client = await ensureYoutubeToken(userId);
   const youtube = google.youtube({ version: "v3", auth: oauth2Client });
-  //   get channel id
-  const res = await youtube.channels.list({
-    mine: true,
-    part: "id, snippet, statistics",
+  const youtubeAnalytics = google.youtubeAnalytics({
+    version: "v2",
+    auth: oauth2Client,
   });
-  const channel = res.data.items && res.data.items[0];
+  // console.log("youtube: ", youtube);
+  //   get channel id
+  const channelRes = await youtube.channels.list({
+    mine: true,
+    part: "id, snippet, statistics, brandingSettings",
+  });
+  // console.log("channelRes: ", channelRes);
+  const channel = channelRes.data.items && channelRes.data.items[0];
+  // console.log("channel: ", channel);
+  // Get channel ID for analytics
+  const channelId = channel?.id;
+
+  // Get detailed analytics (last 30 days)
+  const endDate = new Date().toISOString().split("T")[0];
+  const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+  // console.log("startDate: ", startDate);
+  // console.log("endDate: ", endDate);
+
+  const analyticsData = await youtubeAnalytics?.reports?.query({
+    ids: `channel==${channelId}`,
+    startDate: startDate,
+    endDate: endDate,
+    metrics:
+      "views,estimatedMinutesWatched,averageViewDuration,subscribersGained,likes,comments,shares",
+    dimensions: "day",
+  });
+  // console.log("analyticsData: ", analyticsData);
+
+  const subscribersGained = await youtubeAnalytics.reports.query({
+    ids: `channel==${channelId}`,
+    startDate: startDate,
+    endDate: endDate,
+    metrics: "subscribersGained",
+    dimensions: "day", // This gives you data by date
+  });
+  // console.log("subscribersGained: ", subscribersGained);
+
+  // Get demographics and other metrics
+  const demographics = await youtubeAnalytics.reports.query({
+    ids: `channel==${channelId}`,
+    startDate: startDate,
+    endDate: endDate,
+    metrics: "viewerPercentage",
+    dimensions: "ageGroup,gender",
+  });
+
   const metrics = {
     id: channel.id,
     title: channel.snippet.title,
-    stats: channel.statistics,
+    basicStats: channel.statistics, // subscriberCount, viewCount, videoCount
+    analytics: {
+      views: analyticsData.data,
+      demographics: demographics.data,
+      subscribersGained: subscribersGained.data,
+      // Add more metrics as needed
+    },
   };
 
-  await AnalyticsModel.create({
-    userId,
-    provider: "youtube",
-    data: metrics,
-  });
+  // await AnalyticsModel.create({
+  //   userId,
+  //   provider: "youtube",
+  //   data: metrics,
+  // });
 
   return metrics;
 }

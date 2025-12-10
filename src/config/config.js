@@ -41,6 +41,14 @@ module.exports = {
     api_key: process.env.API_KEY,
     api_secret: process.env.API_SECRET,
   },
+
+  facebook: {
+    app_id: process.env.FACEBOOK_APP_ID,
+    app_secret: process.env.FACEBOOK_APP_SECRET,
+    redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
+    graph_api_version: process.env.FACEBOOK_GRAPH_VERSION,
+  },
+
   googleClientID: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   googleCallbackURL: process.env.CALL_BACK_URL,
