@@ -382,9 +382,19 @@ const updateUserIntoDB = async (userId, payload) => {
   if (!isUserExist) {
     throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
   }
-  const updatedUser = await UserModel.findByIdAndUpdate(userId, payload, {
+  const result = await UserModel.findByIdAndUpdate(userId, payload, {
     new: true,
   });
+  const updatedUser = {
+    phone: result?.phone,
+    email: result?.email,
+    name: result?.name,
+    image: result?.image,
+    badge: result?.badge,
+    role: result?.role,
+    userStatus: result?.userStatus,
+  };
+
   return updatedUser;
 };
 
@@ -660,9 +670,7 @@ const loggedInUserFromDB = async (userID) => {
   if (!user) {
     throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
   }
-  return {
-    user,
-  };
+  return user;
 };
 
 const userReportFromDB = async (req, filters, paginationOptions) => {
@@ -1405,6 +1413,7 @@ const userServices = {
   resendSignUpInitOTP,
   refreshTokenFromDB,
   updateUserIntoDB,
+  loggedInUserFromDB,
 };
 
 module.exports = userServices;

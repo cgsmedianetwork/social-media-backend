@@ -249,8 +249,9 @@ const refreshToken = catchAsyncError(async (req, res) => {
 });
 
 const updateUser = catchAsyncError(async (req, res) => {
-  const { userId } = req.params;
+  const userId = req.userId;
   const payload = req.body;
+  console.log(userId, payload);
   const result = await userServices.updateUserIntoDB(userId, payload);
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -261,6 +262,7 @@ const updateUser = catchAsyncError(async (req, res) => {
     },
   });
 });
+
 const checkUserExistusingPhone = catchAsyncError(async (req, res, next) => {
   const { phone } = req.body;
   // console.log(phone);

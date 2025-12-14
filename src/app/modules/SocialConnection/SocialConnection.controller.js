@@ -104,6 +104,8 @@ const facebookConnect = catchAsyncError(async (req, res, next) => {
 const facebookCallback = catchAsyncError(async (req, res, next) => {
   const code = req.query.code;
   const userId = req.query.state;
+  // console.log("code", code);
+  // console.log("userId", userId);
   if (!code || !userId) {
     throw new ErrorHandler(
       "Code and userId are required",
@@ -112,18 +114,21 @@ const facebookCallback = catchAsyncError(async (req, res, next) => {
   }
   // short lived token
   const short = await facebookClient.exchangeCodeForShortToken(code);
+  // console.log("short", short);
   // long lived token
   const longUser = await facebookClient.exchangeForLongLivedUserToken(
     short.access_token
   );
+  // console.log("longUser", longUser);
   // get pages + page tokens
   const pages = await facebookClient.getPages(longUser.access_token);
+  console.log("pages", pages);
   if (!pages.data.length) {
     throw new ErrorHandler("No Facebook pages found!", httpStatus.NOT_FOUND);
   }
   // Pick the first page
   const page = pages.data[0];
-
+  console.log("page", page);
   // store account
   const user = await UserModel.findById(userId);
   user.socialAccounts = user.socialAccounts.filter(
@@ -141,9 +146,20 @@ const facebookCallback = catchAsyncError(async (req, res, next) => {
     meta: { pageName: page.name, category: page.category },
   });
   await user.save();
-
+  console.log("user", user);
   // redirect to dashboard
   res.redirect(`${config.origin}/profile`);
+});
+
+const fetchFacebookInsights = catchAsyncError(async (req, res, next) => {
+  const id = req.userId;
+  const insights = await SocialConnectionServices.fetchFacebookInsights(id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Facebook insights fetched successfully!",
+    data: insights,
+  });
 });
 
 const SocialConnectionController = {
@@ -151,5 +167,7 @@ const SocialConnectionController = {
   youtubeCallback,
   fetchYoutubeInsights,
   facebookConnect,
+  fetchFacebookInsights,
+  facebookCallback,
 };
 module.exports = SocialConnectionController;

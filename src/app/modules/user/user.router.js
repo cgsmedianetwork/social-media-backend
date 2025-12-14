@@ -11,6 +11,10 @@ const {
 const {
   resumeUploadMiddleware,
 } = require("../../../Middleware/resumeUploadMiddleware");
+const {
+  uploadImgbb,
+  uploadToImgbb,
+} = require("../../../Middleware/upload.imgbb");
 
 const router = express.Router();
 
@@ -79,6 +83,8 @@ router.post(
 router.patch(
   "/update-user",
   authVerification,
+  uploadImgbb.single("image"),
+  uploadToImgbb,
   validateRequest(JoiUserValidationSchema.userUpdateSchema),
   userController.updateUser
 );

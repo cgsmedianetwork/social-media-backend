@@ -49,6 +49,8 @@ module.exports = {
     graph_api_version: process.env.FACEBOOK_GRAPH_VERSION,
   },
 
+  imgbb_key: process.env.IMGBB_KEY,
+
   googleClientID: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   googleCallbackURL: process.env.CALL_BACK_URL,

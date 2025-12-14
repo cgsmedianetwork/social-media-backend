@@ -64,15 +64,24 @@ const getPageInsights = async (
   until,
   period = "day"
 ) => {
-  const { data } = await axios.get(`${graphBase}/${pageId}/insights`, {
-    params: {
-      metric: metrics.join(","),
-      period,
-      since,
-      until,
-      access_token: pageToken,
-    },
-  });
+  console.log("here i am", pageId, pageToken, metrics, since, until, period);
+
+  // src/Helper/facebookClient.js inside getPageInsights
+  try {
+    const { data } = await axios.get(`${graphBase}/${pageId}/insights`, {
+      params: {
+        metric: metrics.join(","),
+        period,
+        since,
+        until,
+        access_token: pageToken,
+      },
+    });
+    return data;
+  } catch (err) {
+    console.error("FB insights error", err.response?.data || err.message);
+    throw err;
+  }
 };
 
 const getPagePosts = async (pageId, pageToken, since, until, limit = 100) => {

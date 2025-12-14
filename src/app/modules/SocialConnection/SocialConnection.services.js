@@ -4,7 +4,10 @@ const ErrorHandler = require("../../../ErrorHandler/errorHandler");
 const httpStatus = require("http-status");
 const AnalyticsModel = require("../Analytics/Analytics.model");
 const UserModel = require("../user/user.model");
+const { default: axios } = require("axios");
+const facebookClient = require("../../../Helper/facebookClient");
 
+// youtube
 function createClient(tokens) {
   const oauth2Client = new google.auth.OAuth2(
     config.googleClientID,
@@ -126,9 +129,120 @@ async function fetchYoutubeInsights(userId) {
   return metrics;
 }
 
+// facebook
+
+async function getFacebookAccount(userId) {
+  const user = await UserModel.findById(userId);
+  const acc = user?.socialAccounts?.find((s) => s.provider === "facebook");
+  if (!acc) {
+    throw new ErrorHandler(
+      "No Facebook account connected found!",
+      httpStatus.BAD_REQUEST
+    );
+  }
+  return { user, acc };
+}
+// date helper
+function dateRange(days) {
+  const end = new Date();
+  const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const toTs = (d) => Math.floor(d.getTime() / 1000);
+  return { since: toTs(start), until: toTs(end) };
+}
+
+async function getPageFanCount(userId) {
+  const { acc } = await getFacebookAccount(userId);
+  const { data } = await axios.get(
+    `https://graph.facebook.com/${config.facebook.graph_api_version}/${acc.providerId}`,
+    {
+      params: {
+        fields: "fan_count,name,followers_count",
+        access_token: acc.accessToken,
+      },
+    }
+  );
+
+  return {
+    pageId: acc?.providerId,
+    name: data?.name,
+    fanCount: data?.fan_count || 0,
+    followersCount: data?.followers_count || 0,
+  };
+}
+
+async function getPageImpressionsLast60Days(userId) {
+  const { acc } = await getFacebookAccount(userId);
+  const { since, until } = dateRange(60);
+  const metrics = ["page_impressions", "page_impressions_unique"];
+  const data = await facebookClient.getPageInsights(
+    acc.providerId,
+    acc.accessToken,
+    metrics,
+    since,
+    until,
+    "day"
+  );
+  return data;
+}
+
+async function getPageVideoViewsLast30Days(userId) {
+  const { acc } = await getFacebookAccount(userId);
+  const { since, until } = dateRange(30);
+  const metrics = ["video_views"];
+  const data = await facebookClient.getPageInsights(
+    acc.providerId,
+    acc.accessToken,
+    metrics,
+    since,
+    until,
+    "day"
+  );
+  return data;
+}
+
+async function getFollowersAddByLast30Days(userId) {
+  const { acc } = await getFacebookAccount(userId);
+  const { since, until } = dateRange(30);
+  const metrics = ["page_fan_adds", "page_fan_removes"];
+  const data = await facebookClient.getPageInsights(
+    acc.providerId,
+    acc.accessToken,
+    metrics,
+    since,
+    until,
+    "day"
+  );
+  return data;
+}
+
+async function fetchFacebookInsights(userId) {
+  const userAccount = await UserModel.findById(userId);
+  if (!userAccount) {
+    throw new ErrorHandler("User not found!", httpStatus.NOT_FOUND);
+  }
+  const { acc } = await getFacebookAccount(userId);
+  // console.log("acc", acc);
+  const pageFanCount = await getPageFanCount(userId);
+  // console.log("pageFanCount", pageFanCount);
+  const pageImpressions = await getPageImpressionsLast60Days(userId);
+  console.log("pageImpressions", pageImpressions);
+  const pageVideoViews = await getPageVideoViewsLast30Days(userId);
+  const followersAdd = await getFollowersAddByLast30Days(userId);
+
+  const metrics = {
+    acc,
+    pageFanCount,
+    pageImpressions,
+    pageVideoViews,
+    followersAdd,
+  };
+  return metrics;
+}
+
 const SocialConnectionServices = {
   fetchYoutubeInsights,
   ensureYoutubeToken,
+  fetchFacebookInsights,
 };
 
 module.exports = SocialConnectionServices;

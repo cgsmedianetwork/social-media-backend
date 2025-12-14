@@ -24,5 +24,12 @@ router.get(
   SocialConnectionController.facebookConnect
 );
 
+router.get("/facebook/callback", SocialConnectionController.facebookCallback);
+router.get(
+  "/facebook/insights",
+  authVerification,
+  SocialConnectionController.fetchFacebookInsights
+);
+
 const SocialConnectionRouter = router;
 module.exports = SocialConnectionRouter;
