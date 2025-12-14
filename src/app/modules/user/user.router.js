@@ -89,6 +89,8 @@ router.patch(
   userController.updateUser
 );
 
+router.get("/verify-token", userController.verifyRefreshToken);
+
 router.post(
   "/create",
   validateRequest(JoiUserValidationSchema.userCreateSchema),

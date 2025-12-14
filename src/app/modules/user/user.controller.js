@@ -71,6 +71,7 @@ const loginUserUsingPhoneAndPassword = catchAsyncError(async (req, res) => {
       secure: config.env === "production",
       httpOnly: true,
       sameSite: config.env === "production" ? "none" : "lax",
+      maxAge: 365 * 24 * 60 * 60 * 1000,
     };
 
     res.cookie("refreshToken", refreshToken, cookieOptions);
@@ -260,6 +261,19 @@ const updateUser = catchAsyncError(async (req, res) => {
     data: {
       result,
     },
+  });
+});
+
+const verifyRefreshToken = catchAsyncError(async (req, res) => {
+  const { refreshToken } = req.cookies;
+
+  const result = await userServices.verifyRefreshTokenFromDB(refreshToken);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Refresh Token verified successfully",
+    data: result,
   });
 });
 
@@ -497,5 +511,6 @@ const userController = {
   refreshToken,
   updateUser,
   logout,
+  verifyRefreshToken,
 };
 module.exports = userController;

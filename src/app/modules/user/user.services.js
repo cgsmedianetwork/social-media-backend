@@ -398,6 +398,31 @@ const updateUserIntoDB = async (userId, payload) => {
   return updatedUser;
 };
 
+const verifyRefreshTokenFromDB = async (token) => {
+  try {
+    if (!token) {
+      throw new ErrorHandler(
+        "Refresh Token is required",
+        httpStatus.BAD_REQUEST
+      );
+    }
+    const decoded = jwt.verify(token, config.jwt_refresh_key);
+    const { userId } = decoded;
+    const isUserExist = await UserModel.findById(userId);
+    if (!isUserExist) {
+      throw new ErrorHandler("User does not exist", httpStatus.NOT_FOUND);
+    }
+    return {
+      isExist: true,
+      name: isUserExist?.name,
+      role: isUserExist?.role,
+      phone: isUserExist?.phone,
+    };
+  } catch (error) {
+    throw new ErrorHandler("Invalid Refresh Token", httpStatus.FORBIDDEN);
+  }
+};
+
 const getUserUsingPhoneFromDB = async (phone) => {
   const isExist = await UserModel.findOne({ phone: phone });
 
@@ -1414,6 +1439,7 @@ const userServices = {
   refreshTokenFromDB,
   updateUserIntoDB,
   loggedInUserFromDB,
+  verifyRefreshTokenFromDB,
 };
 
 module.exports = userServices;
