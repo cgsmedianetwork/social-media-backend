@@ -258,7 +258,7 @@ const loginUserInToDB = async (payload) => {
   const isValidPassword = await bcrypt.compare(password, existUserPassword);
 
   if (!isValidPassword) {
-    throw new ErrorHandler("Invalid Password!", httpStatus.UNAUTHORIZED);
+    throw new ErrorHandler("Wrong Credentials!", httpStatus.BAD_REQUEST);
   }
 
   const accessToken = await jwtHandle(
@@ -421,6 +421,28 @@ const verifyRefreshTokenFromDB = async (token) => {
   } catch (error) {
     throw new ErrorHandler("Invalid Refresh Token", httpStatus.FORBIDDEN);
   }
+};
+
+const getAdminAndSubAdminFromDB = async () => {
+  const admins = await UserModel.find({ role: { $in: ["admin", "subAdmin"] } });
+  // console.log("admins: ", admins);
+  if (!admins) {
+    throw new ErrorHandler(
+      "No admins or subadmins found",
+      httpStatus.NOT_FOUND
+    );
+  }
+  const adminsData = admins.map((admin) => {
+    return {
+      id: admin?._id,
+      name: admin?.name,
+      // phone: admin?.phone,
+      // email: admin?.email,
+      // role: admin?.role,
+      image: admin?.image,
+    };
+  });
+  return adminsData;
 };
 
 const getUserUsingPhoneFromDB = async (phone) => {
@@ -1439,6 +1461,7 @@ const userServices = {
   refreshTokenFromDB,
   updateUserIntoDB,
   loggedInUserFromDB,
+  getAdminAndSubAdminFromDB,
   verifyRefreshTokenFromDB,
 };
 

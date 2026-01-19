@@ -277,6 +277,16 @@ const verifyRefreshToken = catchAsyncError(async (req, res) => {
   });
 });
 
+const getAdminAndSubAdmin = catchAsyncError(async (req, res) => {
+  const result = await userServices.getAdminAndSubAdminFromDB();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Admin and SubAdmin fetched successfully",
+    data: result,
+  });
+});
+
 const checkUserExistusingPhone = catchAsyncError(async (req, res, next) => {
   const { phone } = req.body;
   // console.log(phone);
@@ -512,5 +522,6 @@ const userController = {
   updateUser,
   logout,
   verifyRefreshToken,
+  getAdminAndSubAdmin,
 };
 module.exports = userController;

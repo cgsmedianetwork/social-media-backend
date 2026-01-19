@@ -38,8 +38,6 @@ router.post(
 
 router.post(
   "/login",
-  // originMiddleware,
-  // verifyApiKey,
   validateRequest(JoiUserValidationSchema.loginSchema),
   userController.loginUserUsingPhoneAndPassword
 );
@@ -90,6 +88,12 @@ router.patch(
 );
 
 router.get("/verify-token", userController.verifyRefreshToken);
+
+router.get(
+  "/admin-and-subadmin",
+  authVerification,
+  userController.getAdminAndSubAdmin
+);
 
 router.post(
   "/create",

@@ -71,7 +71,7 @@ const userModelSchema = mongoose.Schema(
     },
     socialAccounts: [socialAccountSchema],
   },
-  { timestamps: true }
+  { timestamps: true, versionKey: false }
 );
 
 const UserModel = mongoose.model("User", userModelSchema);

@@ -2,6 +2,7 @@ const express = require("express");
 const userRouter = require("../app/modules/user/user.router");
 const facilityRouter = require("../app/modules/facilities/facilities.route");
 const SocialConnectionRouter = require("../app/modules/SocialConnection/SocialConnection.router");
+const meetingBookingRouter = require("../app/modules/MeetingBookings/meeting.router");
 const router = express.Router();
 
 const routes = [
@@ -16,6 +17,10 @@ const routes = [
   {
     path: "/social-connection",
     route: SocialConnectionRouter,
+  },
+  {
+    path: "/meeting-bookings",
+    route: meetingBookingRouter,
   },
 ];
 
