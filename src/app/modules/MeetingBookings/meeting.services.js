@@ -12,7 +12,7 @@ const createMeetingBookingIntoDB = async (payload) => {
   });
   if (isMeetingExist) {
     throw new ErrorHandler(
-      "Already have a meeting in this time",
+      "Already have a meeting in this time!",
       httpStatus.CONFLICT
     );
   }

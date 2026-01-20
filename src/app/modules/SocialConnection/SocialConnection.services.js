@@ -111,7 +111,7 @@ async function fetchYoutubeInsights(userId) {
   const metrics = {
     id: channel.id,
     title: channel.snippet.title,
-    basicStats: channel.statistics, // subscriberCount, viewCount, videoCount
+    basicStats: channel.statistics,
     analytics: {
       views: analyticsData.data,
       demographics: demographics.data,
@@ -130,7 +130,6 @@ async function fetchYoutubeInsights(userId) {
 }
 
 // facebook
-
 async function getFacebookAccount(userId) {
   const user = await UserModel.findById(userId);
   const acc = user?.socialAccounts?.find((s) => s.provider === "facebook");
@@ -221,11 +220,13 @@ async function fetchFacebookInsights(userId) {
     throw new ErrorHandler("User not found!", httpStatus.NOT_FOUND);
   }
   const { acc } = await getFacebookAccount(userId);
-  // console.log("acc", acc);
+  console.log("acc", acc);
   const pageFanCount = await getPageFanCount(userId);
-  // console.log("pageFanCount", pageFanCount);
+  console.log("pageFanCount", pageFanCount);
+  
   const pageImpressions = await getPageImpressionsLast60Days(userId);
   console.log("pageImpressions", pageImpressions);
+  return 
   const pageVideoViews = await getPageVideoViewsLast30Days(userId);
   const followersAdd = await getFollowersAddByLast30Days(userId);
 
@@ -239,10 +240,84 @@ async function fetchFacebookInsights(userId) {
   return metrics;
 }
 
+const fetchReachLikeCommentLastTwoMonthsData = async (userId) => {
+const oauth2Client = await ensureYoutubeToken(userId);
+const youtube = google.youtube({version: "v3", auth: oauth2Client})
+const youtubeAnalytics = google.youtubeAnalytics({version: "v2", auth: oauth2Client})
+const channelRes = await youtube.channels.list({mine: true, part: "id"})
+const channel = channelRes.data.items && channelRes.data.items[0];
+const channelId = channel?.id;
+if (!channelId) {
+  throw new ErrorHandler("No YouTube channel found for this account. Please create a channel first.", httpStatus.BAD_REQUEST);
+}
+  // Calculate date ranges for current month and last month
+  const now = new Date();
+  
+  // Current month: 1st of current month to today
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = now;
+
+  // Last month: 1st of last month to last day of last month
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); // 0th day = last day of previous month
+
+  // Format dates as YYYY-MM-DD
+  const formatDate = (date) => date.toISOString().split("T")[0];
+
+  const currentMonthData = await youtubeAnalytics.reports.query({
+    ids: `channel==${channelId}`,
+    startDate: formatDate(currentMonthStart),
+    endDate: formatDate(currentMonthEnd),
+    metrics: "views,likes,comments",
+  })
+
+   // Fetch last month data
+   const lastMonthData = await youtubeAnalytics.reports.query({
+    ids: `channel==${channelId}`,
+    startDate: formatDate(lastMonthStart),
+    endDate: formatDate(lastMonthEnd),
+    metrics: "views,likes,comments",
+  });
+
+  // Extract totals from the response
+  const extractTotals = (data) => {
+    const rows = data?.data?.rows;
+    if (rows && rows.length > 0) {
+      return {
+        views: rows[0][0] || 0,
+        likes: rows[0][1] || 0,
+        comments: rows[0][2] || 0,
+      };
+    }
+    return { views: 0, likes: 0, comments: 0 };
+  };
+
+  return {
+    currentMonth: {
+      period: {
+        start: formatDate(currentMonthStart),
+        end: formatDate(currentMonthEnd),
+      },
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
+      ...extractTotals(currentMonthData),
+    },
+    lastMonth: {
+      period: {
+        start: formatDate(lastMonthStart),
+        end: formatDate(lastMonthEnd),
+      },
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
+      ...extractTotals(lastMonthData),
+    },
+  };
+
+}
+
 const SocialConnectionServices = {
   fetchYoutubeInsights,
   ensureYoutubeToken,
   fetchFacebookInsights,
+  fetchReachLikeCommentLastTwoMonthsData,
 };
 
 module.exports = SocialConnectionServices;

@@ -9,13 +9,12 @@ const socialAccountSchema = new mongoose.Schema(
     providerId: { type: String },
     accessToken: { type: String },
     refreshToken: { type: String },
-    expiresAt: { type: Date }, // when accessToken expires
+    expiresAt: { type: Date }, 
     scope: { type: [String] },
     tokenType: { type: String },
     linked: { type: Boolean, default: false },
     meta: { type: mongoose.Schema.Types.Mixed }, // any platform-specific data
   },
-  { _id: false }
 );
 const userModelSchema = mongoose.Schema(
   {

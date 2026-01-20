@@ -32,13 +32,14 @@ const youtubeCallback = catchAsyncError(async (req, res, next) => {
   // console.log("youtubeCallback");
   const code = req.query.code;
   const userId = req.query.state;
-  console.log("code", code);
+  // console.log("code", code);
   if (!code) {
     throw new ErrorHandler("Code is required", httpStatus.BAD_REQUEST);
   }
   const { tokens } = await oauth2Client.getToken(code);
-  console.log("tokens", tokens);
+  // console.log("tokens", tokens);
   const user = await UserModel.findById(userId);
+  
   user.socialAccounts = user.socialAccounts.filter(
     (s) => s.provider !== "youtube"
   );
@@ -162,6 +163,17 @@ const fetchFacebookInsights = catchAsyncError(async (req, res, next) => {
   });
 });
 
+const fetchReachLikeCommentLastTwoMonthsData = catchAsyncError(async (req, res, next) => {
+  const id = req.userId;
+  const data = await SocialConnectionServices.fetchReachLikeCommentLastTwoMonthsData(id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Reach, like, comment last two months data fetched successfully!",
+    data: data
+  });
+});
+
 const SocialConnectionController = {
   youtubeConnect,
   youtubeCallback,
@@ -169,5 +181,6 @@ const SocialConnectionController = {
   facebookConnect,
   fetchFacebookInsights,
   facebookCallback,
+  fetchReachLikeCommentLastTwoMonthsData
 };
 module.exports = SocialConnectionController;

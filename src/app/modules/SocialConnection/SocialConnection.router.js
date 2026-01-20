@@ -31,5 +31,7 @@ router.get(
   SocialConnectionController.fetchFacebookInsights
 );
 
+router.get("/reach-like-comment-last-two-months-data", authVerification, SocialConnectionController.fetchReachLikeCommentLastTwoMonthsData);
+
 const SocialConnectionRouter = router;
 module.exports = SocialConnectionRouter;
