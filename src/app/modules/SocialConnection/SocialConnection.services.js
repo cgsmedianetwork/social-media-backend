@@ -17,9 +17,14 @@ function createClient(tokens) {
   return oauth2Client;
 }
 
-async function ensureYoutubeToken(userId) {
+async function ensureYoutubeToken(userId, providerId = null) {
   const userAccount = await UserModel.findById(userId);
-  const acc = userAccount.socialAccounts.find((s) => s.provider === "youtube");
+  // const acc = userAccount.socialAccounts.find((s) => s.provider === "youtube");
+ // Find specific account by providerId, or first one if not specified
+ const acc = providerId 
+ ? userAccount.socialAccounts.find((s) => s.provider === "youtube" && s.providerId === providerId)
+ : userAccount.socialAccounts.find((s) => s.provider === "youtube");
+
   if (!acc)
     throw new ErrorHandler(
       "No youtube account connected found!",
@@ -130,9 +135,12 @@ async function fetchYoutubeInsights(userId) {
 }
 
 // facebook
-async function getFacebookAccount(userId) {
+async function getFacebookAccount(userId, providerId = null) {
   const user = await UserModel.findById(userId);
-  const acc = user?.socialAccounts?.find((s) => s.provider === "facebook");
+  // const acc = user?.socialAccounts?.find((s) => s.provider === "facebook");
+  const acc = providerId
+    ? user.socialAccounts.find((s) => s.provider === "facebook" && s.providerId === providerId)
+    : user.socialAccounts.find((s) => s.provider === "facebook");
   if (!acc) {
     throw new ErrorHandler(
       "No Facebook account connected found!",

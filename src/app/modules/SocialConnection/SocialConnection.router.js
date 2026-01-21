@@ -4,6 +4,10 @@ const authVerification = require("../../../Middleware/authVarification");
 
 const router = express.Router();
 
+
+router.get("/list-of-accounts",
+   authVerification, 
+   SocialConnectionController.listOfAccounts);
 // Youtube connection routes
 router.get(
   "/youtube/connect",

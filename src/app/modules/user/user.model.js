@@ -12,6 +12,8 @@ const socialAccountSchema = new mongoose.Schema(
     expiresAt: { type: Date }, 
     scope: { type: [String] },
     tokenType: { type: String },
+    title: { type: String },
+    image: { type: String },
     linked: { type: Boolean, default: false },
     meta: { type: mongoose.Schema.Types.Mixed }, // any platform-specific data
   },

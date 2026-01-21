@@ -51,7 +51,7 @@ const exchangeForLongLivedUserToken = async (shortToken) => {
 
 const getPages = async (longUserToken) => {
   const { data } = await axios.get(`${graphBase}/me/accounts`, {
-    params: { access_token: longUserToken },
+    params: { access_token: longUserToken, fields: "id,name,category,access_token,picture.type(large)" },
   });
   return data;
 };
