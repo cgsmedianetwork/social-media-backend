@@ -64,8 +64,14 @@ const getPageInsights = async (
   until,
   period = "day"
 ) => {
-  console.log("here i am", pageId, pageToken, metrics, since, until, period);
-
+  // console.log("here i am", pageId, pageToken, metrics, since, until, period);
+  // console.log("INSIGHTS PARAMS", {
+  //   metrics,
+  //   period,
+  //   since,
+  //   until,
+  // });
+  
   // src/Helper/facebookClient.js inside getPageInsights
   try {
     const { data } = await axios.get(`${graphBase}/${pageId}/insights`, {
@@ -80,7 +86,7 @@ const getPageInsights = async (
     return data;
   } catch (err) {
     console.error("FB insights error", err.response?.data || err.message);
-    throw err;
+    return { data: [] }
   }
 };
 
@@ -96,6 +102,38 @@ const getPagePosts = async (pageId, pageToken, since, until, limit = 100) => {
   return data;
 };
 
+// Helper function to fetch Facebook posts and calculate likes/comments
+async function fetchFacebookPostsEngagement(pageId, accessToken, since, until) {
+  try {
+    const { data } = await axios.get(
+      `https://graph.facebook.com/${config.facebook.graph_api_version}/${pageId}/posts`,
+      {
+        params: {
+          access_token: accessToken,
+          since,
+          until,
+          fields: "reactions.summary(true),comments.summary(true)",
+          limit: 100,
+        },
+      }
+    );
+    // console.log(`Total posts found: ${data?.data?.length || 0}`);
+
+    let totalLikes = 0;
+    let totalComments = 0;
+
+    (data?.data || []).forEach((post) => {
+      totalLikes += post.reactions?.summary?.total_count || 0;
+      totalComments += post.comments?.summary?.total_count || 0;
+    });
+
+    return { likes: totalLikes, comments: totalComments };
+  } catch (error) {
+    console.error("Facebook posts fetch error:", error.message);
+    return { likes: 0, comments: 0 };
+  }
+}
+
 const facebookClient = {
   authUrl,
   exchangeCodeForShortToken,
@@ -103,6 +141,7 @@ const facebookClient = {
   getPages,
   getPageInsights,
   getPagePosts,
+  fetchFacebookPostsEngagement,
 };
 
 module.exports = facebookClient;

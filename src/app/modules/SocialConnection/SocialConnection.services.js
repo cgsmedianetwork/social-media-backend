@@ -19,17 +19,14 @@ function createClient(tokens) {
 
 async function ensureYoutubeToken(userId, providerId = null) {
   const userAccount = await UserModel.findById(userId);
-  // const acc = userAccount.socialAccounts.find((s) => s.provider === "youtube");
  // Find specific account by providerId, or first one if not specified
  const acc = providerId 
  ? userAccount.socialAccounts.find((s) => s.provider === "youtube" && s.providerId === providerId)
  : userAccount.socialAccounts.find((s) => s.provider === "youtube");
 
-  if (!acc)
-    throw new ErrorHandler(
-      "No youtube account connected found!",
-      httpStatus.BAD_REQUEST
-    );
+  if (!acc){
+    return null;
+  }
   const oauth2Client = createClient({
     access_token: acc.accessToken,
     refresh_token: acc.refreshToken,
@@ -249,46 +246,31 @@ async function fetchFacebookInsights(userId) {
 }
 
 const fetchReachLikeCommentLastTwoMonthsData = async (userId) => {
-const oauth2Client = await ensureYoutubeToken(userId);
-const youtube = google.youtube({version: "v3", auth: oauth2Client})
-const youtubeAnalytics = google.youtubeAnalytics({version: "v2", auth: oauth2Client})
-const channelRes = await youtube.channels.list({mine: true, part: "id"})
-const channel = channelRes.data.items && channelRes.data.items[0];
-const channelId = channel?.id;
-if (!channelId) {
-  throw new ErrorHandler("No YouTube channel found for this account. Please create a channel first.", httpStatus.BAD_REQUEST);
-}
-  // Calculate date ranges for current month and last month
-  const now = new Date();
+  const userAccount = await UserModel.findById(userId);
+
   
-  // Current month: 1st of current month to today
+    // Calculate date ranges for current month and last month
+  const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const currentMonthEnd = now;
-
-  // Last month: 1st of last month to last day of last month
+  const facebookInsightsEndDate = new Date(now.getTime())
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); // 0th day = last day of previous month
-
-  // Format dates as YYYY-MM-DD
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); 
   const formatDate = (date) => date.toISOString().split("T")[0];
+  const toTimestamp = (date) => Math.floor(date.getTime() / 1000);
 
-  const currentMonthData = await youtubeAnalytics.reports.query({
-    ids: `channel==${channelId}`,
-    startDate: formatDate(currentMonthStart),
-    endDate: formatDate(currentMonthEnd),
-    metrics: "views,likes,comments",
-  })
+    // Initialize combined totals
+  const combinedTotals = {
+      currentMonth: { views: 0, likes: 0, comments: 0 },
+      lastMonth: { views: 0, likes: 0, comments: 0 },
+   };
 
-   // Fetch last month data
-   const lastMonthData = await youtubeAnalytics.reports.query({
-    ids: `channel==${channelId}`,
-    startDate: formatDate(lastMonthStart),
-    endDate: formatDate(lastMonthEnd),
-    metrics: "views,likes,comments",
-  });
+  // YouTube
+   const youtubeAccounts = userAccount.socialAccounts.filter(
+    (s) => s.provider === "youtube"
+  );
 
-  // Extract totals from the response
-  const extractTotals = (data) => {
+  const extractYoutubeTotals = (data) => {
     const rows = data?.data?.rows;
     if (rows && rows.length > 0) {
       return {
@@ -300,22 +282,156 @@ if (!channelId) {
     return { views: 0, likes: 0, comments: 0 };
   };
 
+  const youtubeData = await Promise.all(youtubeAccounts.map(async(acc)=> {
+    try {
+      const oauth2Client = await ensureYoutubeToken(userId, acc.providerId);
+      if (!oauth2Client)  return null;
+
+      const youtube = google.youtube({version: "v3", auth: oauth2Client})
+      const youtubeAnalytics = google.youtubeAnalytics({version: "v2", auth: oauth2Client})
+      const channelRes = await youtube.channels.list({mine: true, part: "id, snippet"})
+      const channel = channelRes.data.items && channelRes.data.items[0];
+      const channelId = channel?.id;
+      if (!channelId) return null;
+
+      // Fetch youtube data
+      const [currentMonthData, lastMonthData] = await Promise.all([
+          youtubeAnalytics.reports.query({
+            ids: `channel==${channelId}`,
+            startDate: formatDate(currentMonthStart),
+            endDate: formatDate(currentMonthEnd),
+            metrics: "views,likes,comments",
+          }),
+          youtubeAnalytics.reports.query({
+            ids: `channel==${channelId}`,
+            startDate: formatDate(lastMonthStart),
+            endDate: formatDate(lastMonthEnd),
+            metrics: "views,likes,comments",
+          }),
+        ]);
+
+        return {
+          provider: "youtube",
+          name: channel?.snippet?.title || acc.meta?.channelTitle || "Unknown",
+          currentMonth: extractYoutubeTotals(currentMonthData),
+          lastMonth: extractYoutubeTotals(lastMonthData),
+        };
+
+    } catch (error) {
+      console.error("YouTube error:", error.message);
+        return null;
+    }
+  }))
+
+  // facebook 
+  const facebookAccounts = userAccount.socialAccounts.filter(
+    (s) => s.provider === "facebook"
+  );
+
+  const extractFacebookMetricTotal = (insightsData, metricName) => {
+    const metric = insightsData?.data?.find((m) => m.name === metricName);
+    if (!metric?.values) return 0;
+    // Sum all daily values
+    return metric.values.reduce((sum, v) => sum + (v.value || 0), 0);
+  };
+
+  const facebookData = await Promise.all(
+    facebookAccounts.map(async (acc) => {
+      try {
+        // Current month timestamps
+        const currentSince = toTimestamp(currentMonthStart);
+        const currentUntil = toTimestamp(facebookInsightsEndDate);
+        // Last month timestamps
+        const lastSince = toTimestamp(lastMonthStart);
+        const lastUntil = toTimestamp(lastMonthEnd);
+
+        // Fetch page insights for both periods
+        // Metrics: page_impressions (reach), page_post_engagements (total engagement)
+        const [currentInsights, lastInsights] = await Promise.all([
+          facebookClient.getPageInsights(
+            acc.providerId,
+            acc.accessToken,
+            ["page_posts_impressions"],
+            currentSince,
+            currentUntil,           
+            "day"
+          ),
+          facebookClient.getPageInsights(
+            acc.providerId,
+            acc.accessToken,
+            ["page_posts_impressions"],
+            lastSince,
+            lastUntil,
+            "day"
+          ),
+        ]);
+        // console.log("currentInsights", currentInsights);
+        // console.log("lastInsights", lastInsights);
+        // Fetch posts to get likes and comments for each period
+        const [currentPosts, lastPosts] = await Promise.all([
+          facebookClient.fetchFacebookPostsEngagement(acc.providerId, acc.accessToken, currentSince, currentUntil),
+          facebookClient.fetchFacebookPostsEngagement(acc.providerId, acc.accessToken, lastSince, lastUntil),
+        ]);
+              
+
+        return {
+          provider: "facebook",
+          name: acc.meta?.pageName || "Unknown Page",
+          currentMonth: {
+            views: extractFacebookMetricTotal(currentInsights, "page_impressions"),
+            likes: currentPosts.likes,
+            comments: currentPosts.comments,
+          },
+          lastMonth: {
+            views: extractFacebookMetricTotal(lastInsights, "page_impressions"),
+            likes: lastPosts.likes,
+            comments: lastPosts.comments,
+          },
+        };
+      } catch (error) {
+        console.error("Facebook error:", error.message);
+        return null;
+      }
+    })
+  );
+  // console.log("facebookData", facebookData);
+
+  // combine all platform data
+  const allPlatformData = [...youtubeData, ...facebookData].filter(Boolean);
+
+  allPlatformData.forEach((platform) => {
+    if (platform.currentMonth) {
+      combinedTotals.currentMonth.views += platform.currentMonth.views;
+      combinedTotals.currentMonth.likes += platform.currentMonth.likes;
+      combinedTotals.currentMonth.comments += platform.currentMonth.comments;
+    }
+    if (platform.lastMonth) {
+      combinedTotals.lastMonth.views += platform.lastMonth.views;
+      combinedTotals.lastMonth.likes += platform.lastMonth.likes;
+      combinedTotals.lastMonth.comments += platform.lastMonth.comments;
+    }
+  });
+
+
   return {
-    currentMonth: {
-      period: {
-        start: formatDate(currentMonthStart),
-        end: formatDate(currentMonthEnd),
+    platforms: allPlatformData, // Individual platform breakdown (optional)
+    combined: {
+      currentMonth: {
+        period: {
+          start: formatDate(currentMonthStart),
+          end: formatDate(currentMonthEnd),
+        },
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        ...combinedTotals.currentMonth,
       },
-      // eslint-disable-next-line node/no-unsupported-features/es-syntax
-      ...extractTotals(currentMonthData),
-    },
-    lastMonth: {
-      period: {
-        start: formatDate(lastMonthStart),
-        end: formatDate(lastMonthEnd),
+      lastMonth: {
+        period: {
+          start: formatDate(lastMonthStart),
+          end: formatDate(lastMonthEnd),
+        },
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        ...combinedTotals.lastMonth,
       },
-      // eslint-disable-next-line node/no-unsupported-features/es-syntax
-      ...extractTotals(lastMonthData),
     },
   };
 

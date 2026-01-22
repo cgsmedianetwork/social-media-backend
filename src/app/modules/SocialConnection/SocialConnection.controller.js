@@ -13,21 +13,42 @@ const listOfAccounts = catchAsyncError(async (req, res, next) => {
   const id = req.userId;
   const user = await UserModel.findById(id);
 
-  const accounts = user.socialAccounts.map((account) => {
-    return {
-      provider: account.provider,
+  // Group accounts by provider
+  const groupedAccounts = {
+    facebook: [],
+    youtube: [],
+    instagram: [],
+    tiktok: []
+  };
+
+  // const accounts = user.socialAccounts.map((account) => {
+  //   return {
+  //     provider: account.provider,
+  //     providerId: account.providerId,
+  //     title: account.title,
+  //     image: account.image,
+  //   };
+  // });
+
+  user.socialAccounts.forEach((account) => {
+    const accountData = {
       providerId: account.providerId,
       title: account.title,
       image: account.image,
     };
+
+    // Add to the appropriate group if it exists
+    if (Object.hasOwn(groupedAccounts, account.provider)) {
+      groupedAccounts[account.provider].push(accountData);
+    }
   });
-  console.log("accounts", accounts);
+  // console.log("groupedAccounts", groupedAccounts);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "All accounts fetched successfully!",
-    data: accounts
+    data: groupedAccounts
   });
 });
 
@@ -156,7 +177,7 @@ const facebookCallback = catchAsyncError(async (req, res, next) => {
   );
   // get pages + page tokens
   const pages = await facebookClient.getPages(longUser.access_token);
-  console.log("pages", pages);
+  // console.log("pages", pages);
 
   if (!pages.data.length) {
     throw new ErrorHandler("No Facebook pages found!", httpStatus.NOT_FOUND);
