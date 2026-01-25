@@ -5,12 +5,8 @@ const validateRequest = require("../../../Middleware/validateRequest");
 const userController = require("./user.controller");
 const authVerification = require("../../../Middleware/authVarification");
 const UploadToImageServerMiddleware = require("../../../Middleware/UploadToImageServerMiddleware");
-const {
-  UploadResumeServerMiddleware,
-} = require("../../../Middleware/uploadResume.middleware");
-const {
-  resumeUploadMiddleware,
-} = require("../../../Middleware/resumeUploadMiddleware");
+
+
 const {
   uploadImgbb,
   uploadToImgbb,
@@ -116,19 +112,7 @@ router.patch(
   userController.updateUserProfile
 );
 
-router.patch(
-  "/resumeUpload",
-  authVerification,
-  // UploadResumeServerMiddleware("resume"),
-  resumeUploadMiddleware("resume"),
-  userController.updateUserProfile
-);
 
-// router.patch(
-//   "/update-password",
-//   authVerification,
-//   userController.updateUserPassword
-// );
 
 router.post(
   "/isExistSingleUser",

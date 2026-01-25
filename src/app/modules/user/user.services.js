@@ -13,9 +13,7 @@ const getTimeDifference = require("../../../utility/getTimeDifference");
 const jwtHandle = require("../../../shared/createToken");
 const config = require("../../../config/config");
 const ErrorHandler = require("../../../ErrorHandler/errorHandler");
-const {
-  resumeDeleteMiddleware,
-} = require("../../../Middleware/resumeUploadMiddleware");
+
 const UserModel = require("./user.model");
 const PendingUserModel = require("../PendingUser/PendingUser.model");
 const { v4: uuidv4 } = require("uuid");
