@@ -6,14 +6,13 @@ const ErrorHandler = require("../ErrorHandler/errorHandler");
 const handleCastError = require("../ErrorHandler/handleCastError");
 const handleValidationError = require("../ErrorHandler/handleValidationError");
 
-const { errorLogger } = require("../shared/logger");
 const config = require("../config/config");
 
 const globalErrorHandler = (error, req, res, next) => {
   if (config.env === "development") {
     console.log("🐱‍🏍 globalErrorHandler ~~", { error });
   } else {
-    errorLogger.error("🐱‍🏍 globalErrorHandler ~~", error);
+    console.log("🐱‍🏍 globalErrorHandler ~~", error);
   }
 
   let statusCode = 500;
