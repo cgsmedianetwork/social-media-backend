@@ -49,6 +49,14 @@ module.exports = {
     graph_api_version: process.env.FACEBOOK_GRAPH_VERSION,
   },
 
+  instagram: {
+    app_id: process.env.INSTAGRAM_APP_ID,
+    app_secret: process.env.INSTAGRAM_APP_SECRET,
+    redirect_uri: process.env.INSTAGRAM_REDIRECT_URI,
+    graph_api_version: process.env.INSTAGRAM_GRAPH_VERSION,
+    access_token: process.env.INSTAGRAM_ACCESS_TOKEN,
+  },
+
   imgbb_key: process.env.IMGBB_KEY,
 
   googleClientID: process.env.GOOGLE_CLIENT_ID,

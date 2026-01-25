@@ -231,7 +231,7 @@ async function fetchFacebookInsights(userId) {
   
   const pageImpressions = await getPageImpressionsLast60Days(userId);
   console.log("pageImpressions", pageImpressions);
-  return 
+  // return 
   const pageVideoViews = await getPageVideoViewsLast30Days(userId);
   const followersAdd = await getFollowersAddByLast30Days(userId);
 
@@ -245,9 +245,12 @@ async function fetchFacebookInsights(userId) {
   return metrics;
 }
 
+// instagram 
+
+
+// common 
 const fetchReachLikeCommentLastTwoMonthsData = async (userId) => {
   const userAccount = await UserModel.findById(userId);
-
   
     // Calculate date ranges for current month and last month
   const now = new Date();
@@ -436,6 +439,8 @@ const fetchReachLikeCommentLastTwoMonthsData = async (userId) => {
   };
 
 }
+
+
 
 const SocialConnectionServices = {
   fetchYoutubeInsights,

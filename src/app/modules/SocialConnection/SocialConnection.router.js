@@ -8,6 +8,7 @@ const router = express.Router();
 router.get("/list-of-accounts",
    authVerification, 
    SocialConnectionController.listOfAccounts);
+
 // Youtube connection routes
 router.get(
   "/youtube/connect",
@@ -35,6 +36,10 @@ router.get(
   SocialConnectionController.fetchFacebookInsights
 );
 
+// instagram connection routes
+router.get("/instagram/connect", authVerification, SocialConnectionController.instagramConnect);
+
+// common routes
 router.get("/reach-like-comment-last-two-months-data", authVerification, SocialConnectionController.fetchReachLikeCommentLastTwoMonthsData);
 
 const SocialConnectionRouter = router;

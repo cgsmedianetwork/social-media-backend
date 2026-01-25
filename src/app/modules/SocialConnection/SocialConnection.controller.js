@@ -8,6 +8,7 @@ const { google } = require("googleapis");
 const httpStatus = require("http-status");
 const facebookClient = require("../../../Helper/facebookClient");
 const config = require("../../../config/config");
+const instagramClient = require("../../../Helper/instagramClient");
 
 const listOfAccounts = catchAsyncError(async (req, res, next) => {
   const id = req.userId;
@@ -236,6 +237,15 @@ const fetchFacebookInsights = catchAsyncError(async (req, res, next) => {
   });
 });
 
+// instagram 
+const instagramConnect = catchAsyncError(async (req, res, next) => {
+  const url = instagramClient.authUrl(req.userId);
+  res.json({ url });
+});
+
+
+// common 
+
 const fetchReachLikeCommentLastTwoMonthsData = catchAsyncError(async (req, res, next) => {
   const id = req.userId;
   const data = await SocialConnectionServices.fetchReachLikeCommentLastTwoMonthsData(id);
@@ -288,6 +298,7 @@ const SocialConnectionController = {
   facebookCallback,
   fetchReachLikeCommentLastTwoMonthsData,
   listOfAccounts,
-  disconnectAccount
+  disconnectAccount,
+  instagramConnect,
 };
 module.exports = SocialConnectionController;
