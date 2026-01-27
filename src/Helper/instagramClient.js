@@ -13,6 +13,7 @@ const authUrl = (state) => {
         "instagram_manage_comments",
         "instagram_manage_messages",
         "business_management",
+        "pages_manage_metadata"
     ]
 
     // eslint-disable-next-line node/no-unsupported-features/node-builtins

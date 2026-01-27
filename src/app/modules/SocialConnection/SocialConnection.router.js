@@ -10,11 +10,12 @@ router.get("/list-of-accounts",
    SocialConnectionController.listOfAccounts);
 
 // Youtube connection routes
-router.get(
+router.post(
   "/youtube/connect",
   authVerification,
   SocialConnectionController.youtubeConnect
 );
+
 router.get("/youtube/callback", SocialConnectionController.youtubeCallback);
 router.get(
   "/youtube/insights",
@@ -23,7 +24,7 @@ router.get(
 );
 
 // facebook connection routes
-router.get(
+router.post(
   "/facebook/connect",
   authVerification,
   SocialConnectionController.facebookConnect
@@ -37,10 +38,13 @@ router.get(
 );
 
 // instagram connection routes
-router.get("/instagram/connect", authVerification, SocialConnectionController.instagramConnect);
+router.post("/instagram/connect", authVerification, SocialConnectionController.instagramConnect);
+router.get("/instagram/callback", SocialConnectionController.instagramCallback)
 
 // common routes
 router.get("/reach-like-comment-last-two-months-data", authVerification, SocialConnectionController.fetchReachLikeCommentLastTwoMonthsData);
+
+router.delete("/disconnect-account/:provider/:providerId", authVerification, SocialConnectionController.disconnectAccount);
 
 const SocialConnectionRouter = router;
 module.exports = SocialConnectionRouter;

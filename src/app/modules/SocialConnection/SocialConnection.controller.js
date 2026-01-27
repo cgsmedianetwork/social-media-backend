@@ -74,6 +74,7 @@ const youtubeConnect = catchAsyncError(async (req, res, next) => {
 });
 
 const youtubeCallback = catchAsyncError(async (req, res, next) => {
+  try{
   // console.log("youtubeCallback");
   const code = req.query.code;
   const userId = req.query.state;
@@ -130,7 +131,9 @@ const youtubeCallback = catchAsyncError(async (req, res, next) => {
   if (existingIndex !== -1) {
      // Update existing account
      user.socialAccounts[existingIndex] = {
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
       ...user.socialAccounts[existingIndex].toObject(),
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
       ...account,
     };
   }else{
@@ -139,7 +142,10 @@ const youtubeCallback = catchAsyncError(async (req, res, next) => {
 
   await user.save();
   res.redirect(`${config.origin}/profile`);
-
+  }catch(error){
+    console.error("Error in youtubeCallback:", error);
+    res.redirect(`${config.origin}/profile?error=Fail to connect Youtube account!`);
+  }
 });
 
 const fetchYoutubeInsights = catchAsyncError(async (req, res, next) => {
@@ -157,17 +163,19 @@ const fetchYoutubeInsights = catchAsyncError(async (req, res, next) => {
 
 // facebook 
 const facebookConnect = catchAsyncError(async (req, res, next) => {
+  console.log("connect facebook");
   const url = facebookClient.authUrl(req.userId);
   res.json({ url });
 });
 
 const facebookCallback = catchAsyncError(async (req, res, next) => {
+  try{
   const code = req.query.code;
   const userId = req.query.state;
   // console.log("code", code);
   // console.log("userId", userId);
   if (!code || !userId) {
-   res.redirect(`${config.origin}/profile`);
+   res.redirect(`${config.origin}/profile?error=Fail to connect Facebook account!`);
    return;
   }
   // short lived token
@@ -223,7 +231,10 @@ const facebookCallback = catchAsyncError(async (req, res, next) => {
 
   await user.save();
   res.redirect(`${config.origin}/profile`);
-  
+  }catch(error){
+    console.error("Error in facebookCallback:", error);
+    res.redirect(`${config.origin}/profile?error=Error in connecting Facebook account!`);
+  }
 });
 
 const fetchFacebookInsights = catchAsyncError(async (req, res, next) => {
@@ -241,6 +252,67 @@ const fetchFacebookInsights = catchAsyncError(async (req, res, next) => {
 const instagramConnect = catchAsyncError(async (req, res, next) => {
   const url = instagramClient.authUrl(req.userId);
   res.json({ url });
+});
+
+const instagramCallback = catchAsyncError(async (req, res, next) => {
+  try{
+  const code = req.query.code;
+  const userId = req.query.state;
+  const user = await UserModel.findById(userId);
+  if(!user){
+    res.redirect(`${config.origin}/profile?error=User not found!`);
+    return;
+  }
+
+  const tokenData = await instagramClient.exchangeCodeForToken(code);
+  console.log("tokenData", tokenData);
+
+  const longLivedToken = await instagramClient.exchangeForLongLivedToken(tokenData.access_token);
+  console.log("longLivedToken", longLivedToken);
+
+  const pagesWithInstagram = await instagramClient.getPagesWithInstagram(longLivedToken.access_token);
+  console.log("pagesWithInstagram", pagesWithInstagram);
+
+  for(const page of pagesWithInstagram || []){
+    const existingIndex = user.socialAccounts.findIndex(
+      (s) => s.provider === "instagram" && s.providerId === page.id
+    );
+    const instagramAccount = page.instagram_business_account;
+    const profile = await instagramClient.getInstagramProfile(instagramAccount.id, page.access_token);
+    // console.log("profile", profile);
+
+    const account = {
+      provider: "instagram",
+      providerId: instagramAccount?.id,
+      accessToken: page.access_token,
+      refreshToken: longLivedToken?.access_token,
+      expiresAt: longLivedToken?.expires_in
+      ? new Date(Date.now() + longLivedToken.expires_in * 1000) : null,
+      scope: ["instagram_basic", "instagram_manage_insights", "instagram_manage_comments", "instagram_manage_messages", "business_management", "pages_manage_metadata"],
+      linked: true,
+      title: profile?.username,
+      image: profile?.profile_picture_url,
+      meta: { category: profile?.category, followersCount: profile?.followers_count, pageId: page?.id, pageName: page?.name },
+    }
+    if(existingIndex !== -1){
+      user.socialAccounts[existingIndex] = {
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        ...user.socialAccounts[existingIndex].toObject(),
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        ...account,
+      };
+    }else{
+      user.socialAccounts.push(account);
+    }    
+  }
+
+  await user.save();
+  res.redirect(`${config.origin}/profile`);
+  }catch(error){
+    console.error("Error in instagramCallback:", error);
+    res.redirect(`${config.origin}/profile?error=Error in connecting Instagram account!`);
+  }
+  
 });
 
 
@@ -300,5 +372,6 @@ const SocialConnectionController = {
   listOfAccounts,
   disconnectAccount,
   instagramConnect,
+  instagramCallback,
 };
 module.exports = SocialConnectionController;
