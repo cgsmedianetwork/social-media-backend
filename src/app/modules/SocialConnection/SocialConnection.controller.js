@@ -9,6 +9,7 @@ const httpStatus = require("http-status");
 const facebookClient = require("../../../Helper/facebookClient");
 const config = require("../../../config/config");
 const instagramClient = require("../../../Helper/instagramClient");
+const tiktokClient = require("../../../Helper/tiktokClient");
 
 const listOfAccounts = catchAsyncError(async (req, res, next) => {
   const id = req.userId;
@@ -19,7 +20,7 @@ const listOfAccounts = catchAsyncError(async (req, res, next) => {
     facebook: [],
     youtube: [],
     instagram: [],
-    tiktok: []
+    tiktok: [],
   };
 
   // const accounts = user.socialAccounts.map((account) => {
@@ -49,11 +50,11 @@ const listOfAccounts = catchAsyncError(async (req, res, next) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "All accounts fetched successfully!",
-    data: groupedAccounts
+    data: groupedAccounts,
   });
 });
 
-// youtube 
+// youtube
 const youtubeConnect = catchAsyncError(async (req, res, next) => {
   const scopes = [
     "https://www.googleapis.com/auth/youtube.readonly",
@@ -74,77 +75,86 @@ const youtubeConnect = catchAsyncError(async (req, res, next) => {
 });
 
 const youtubeCallback = catchAsyncError(async (req, res, next) => {
-  try{
-  // console.log("youtubeCallback");
-  const code = req.query.code;
-  const userId = req.query.state;
-  // console.log("code", code);
-  if (!code) {
-    throw new ErrorHandler("Code is required", httpStatus.BAD_REQUEST);
-  }
-  const { tokens } = await oauth2Client.getToken(code);
-  // console.log("tokens", tokens);
-  const user = await UserModel.findById(userId);
+  try {
+    // console.log("youtubeCallback");
+    const code = req.query.code;
+    const userId = req.query.state;
+    // console.log("code", code);
+    if (!code) {
+      throw new ErrorHandler("Code is required", httpStatus.BAD_REQUEST);
+    }
+    const { tokens } = await oauth2Client.getToken(code);
+    // console.log("tokens", tokens);
+    const user = await UserModel.findById(userId);
 
     // setting oauth2Client credentials
-  oauth2Client.setCredentials({
+    oauth2Client.setCredentials({
       access_token: tokens?.access_token,
       refresh_token: tokens?.refresh_token,
-      expiry_date: tokens?.expiry_date
-  });
+      expiry_date: tokens?.expiry_date,
+    });
 
-   // Fetch YouTube channel ID first
-  const youtube = google.youtube({ version: "v3", auth: oauth2Client });
-  const response = await youtube.channels.list({ mine: true, part: "id,snippet" });
-  
-  if (!response.data.items || response.data.items.length === 0) {
-    throw new ErrorHandler(
-      "No YouTube channel found for this account. Please create a channel first.",
-      httpStatus.BAD_REQUEST
+    // Fetch YouTube channel ID first
+    const youtube = google.youtube({ version: "v3", auth: oauth2Client });
+    const response = await youtube.channels.list({
+      mine: true,
+      part: "id,snippet",
+    });
+
+    if (!response.data.items || response.data.items.length === 0) {
+      throw new ErrorHandler(
+        "No YouTube channel found for this account. Please create a channel first.",
+        httpStatus.BAD_REQUEST,
+      );
+    }
+
+    const channelId = response.data.items[0].id;
+    const channelTitle = response.data.items[0].snippet?.title;
+    const channelImage =
+      response.data.items[0].snippet?.thumbnails?.default?.url;
+
+    // Check if this channel/account already exists (by providerId)
+    const existingIndex = user.socialAccounts.findIndex(
+      (s) => s.provider === "youtube" && s.providerId === channelId,
     );
-  }
 
-  const channelId = response.data.items[0].id;
-  const channelTitle = response.data.items[0].snippet?.title;
-  const channelImage = response.data.items[0].snippet?.thumbnails?.default?.url;
-
-   // Check if this channel/account already exists (by providerId)
-   const existingIndex = user.socialAccounts.findIndex(
-    (s) => s.provider === "youtube" && s.providerId === channelId
-  );
-
-  // creating account object
-  const account = {
-    provider: "youtube",
-    providerId: channelId,
-    accessToken: tokens?.access_token,
-    refreshToken: tokens?.refresh_token || 
-    user.socialAccounts.find((s) => s.provider === "youtube" && s.providerId === channelId)?.refreshToken,
-    expiresAt: tokens?.expiry_date ? new Date(tokens.expiry_date) : null,
-    linked: true,
-    scope: tokens?.scope?.split(" "),
-    title: channelTitle,
-    image: channelImage,
-    tokenType: tokens?.token_type,
-  };
-
-  if (existingIndex !== -1) {
-     // Update existing account
-     user.socialAccounts[existingIndex] = {
-      // eslint-disable-next-line node/no-unsupported-features/es-syntax
-      ...user.socialAccounts[existingIndex].toObject(),
-      // eslint-disable-next-line node/no-unsupported-features/es-syntax
-      ...account,
+    // creating account object
+    const account = {
+      provider: "youtube",
+      providerId: channelId,
+      accessToken: tokens?.access_token,
+      refreshToken:
+        tokens?.refresh_token ||
+        user.socialAccounts.find(
+          (s) => s.provider === "youtube" && s.providerId === channelId,
+        )?.refreshToken,
+      expiresAt: tokens?.expiry_date ? new Date(tokens.expiry_date) : null,
+      linked: true,
+      scope: tokens?.scope?.split(" "),
+      title: channelTitle,
+      image: channelImage,
+      tokenType: tokens?.token_type,
     };
-  }else{
-    user.socialAccounts.push(account);
-  }
 
-  await user.save();
-  res.redirect(`${config.origin}/profile`);
-  }catch(error){
+    if (existingIndex !== -1) {
+      // Update existing account
+      user.socialAccounts[existingIndex] = {
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        ...user.socialAccounts[existingIndex].toObject(),
+        // eslint-disable-next-line node/no-unsupported-features/es-syntax
+        ...account,
+      };
+    } else {
+      user.socialAccounts.push(account);
+    }
+
+    await user.save();
+    res.redirect(`${config.origin}/profile`);
+  } catch (error) {
     console.error("Error in youtubeCallback:", error);
-    res.redirect(`${config.origin}/profile?error=Fail to connect Youtube account!`);
+    res.redirect(
+      `${config.origin}/profile?error=Fail to connect Youtube account!`,
+    );
   }
 });
 
@@ -161,7 +171,7 @@ const fetchYoutubeInsights = catchAsyncError(async (req, res, next) => {
   });
 });
 
-// facebook 
+// facebook
 const facebookConnect = catchAsyncError(async (req, res, next) => {
   console.log("connect facebook");
   const url = facebookClient.authUrl(req.userId);
@@ -169,71 +179,75 @@ const facebookConnect = catchAsyncError(async (req, res, next) => {
 });
 
 const facebookCallback = catchAsyncError(async (req, res, next) => {
-  try{
-  const code = req.query.code;
-  const userId = req.query.state;
-  // console.log("code", code);
-  // console.log("userId", userId);
-  if (!code || !userId) {
-   res.redirect(`${config.origin}/profile?error=Fail to connect Facebook account!`);
-   return;
-  }
-  // short lived token
-  const short = await facebookClient.exchangeCodeForShortToken(code);
-  // long lived token
-  const longUser = await facebookClient.exchangeForLongLivedUserToken(
-    short.access_token
-  );
-  // get pages + page tokens
-  const pages = await facebookClient.getPages(longUser.access_token);
-  // console.log("pages", pages);
-
-  if (!pages.data.length) {
-    throw new ErrorHandler("No Facebook pages found!", httpStatus.NOT_FOUND);
-  }
-
-  const user = await UserModel.findById(userId);
-
-  // Add ALL pages (or you can let user choose which ones)
-  for(const page of pages.data || []){
-    // console.log("page", page);
-    const existingIndex = user.socialAccounts.findIndex(
-      (s) => s.provider === "facebook" && s.providerId === page.id
+  try {
+    const code = req.query.code;
+    const userId = req.query.state;
+    // console.log("code", code);
+    // console.log("userId", userId);
+    if (!code || !userId) {
+      res.redirect(
+        `${config.origin}/profile?error=Fail to connect Facebook account!`,
+      );
+      return;
+    }
+    // short lived token
+    const short = await facebookClient.exchangeCodeForShortToken(code);
+    // long lived token
+    const longUser = await facebookClient.exchangeForLongLivedUserToken(
+      short.access_token,
     );
+    // get pages + page tokens
+    const pages = await facebookClient.getPages(longUser.access_token);
+    // console.log("pages", pages);
 
-    const account = {
-      provider: "facebook",
-      providerId: page.id,
-      accessToken: page.access_token,
-      refreshToken: longUser?.access_token,
-      expiresAt: longUser.expires_in
-        ? new Date(Date.now() + longUser.expires_in * 1000)
-        : null,
-      scope: ["pages_show_list", "pages_read_engagement", "read_insights"],
-      linked: true,
-      title: page.name,
-      image: page.picture?.data?.url,
-      meta: { pageName: page.name, category: page.category },
+    if (!pages.data.length) {
+      throw new ErrorHandler("No Facebook pages found!", httpStatus.NOT_FOUND);
     }
 
-    if(existingIndex !== -1){
-      // Update existing
-      user.socialAccounts[existingIndex] = {
-        // eslint-disable-next-line node/no-unsupported-features/es-syntax
-        ...user.socialAccounts[existingIndex].toObject(),
-        // eslint-disable-next-line node/no-unsupported-features/es-syntax
-        ...account,
+    const user = await UserModel.findById(userId);
+
+    // Add ALL pages (or you can let user choose which ones)
+    for (const page of pages.data || []) {
+      // console.log("page", page);
+      const existingIndex = user.socialAccounts.findIndex(
+        (s) => s.provider === "facebook" && s.providerId === page.id,
+      );
+
+      const account = {
+        provider: "facebook",
+        providerId: page.id,
+        accessToken: page.access_token,
+        refreshToken: longUser?.access_token,
+        expiresAt: longUser.expires_in
+          ? new Date(Date.now() + longUser.expires_in * 1000)
+          : null,
+        scope: ["pages_show_list", "pages_read_engagement", "read_insights"],
+        linked: true,
+        title: page.name,
+        image: page.picture?.data?.url,
+        meta: { pageName: page.name, category: page.category },
       };
-    }else{
-      user.socialAccounts.push(account);
-    }
-  }
 
-  await user.save();
-  res.redirect(`${config.origin}/profile`);
-  }catch(error){
+      if (existingIndex !== -1) {
+        // Update existing
+        user.socialAccounts[existingIndex] = {
+          // eslint-disable-next-line node/no-unsupported-features/es-syntax
+          ...user.socialAccounts[existingIndex].toObject(),
+          // eslint-disable-next-line node/no-unsupported-features/es-syntax
+          ...account,
+        };
+      } else {
+        user.socialAccounts.push(account);
+      }
+    }
+
+    await user.save();
+    res.redirect(`${config.origin}/profile`);
+  } catch (error) {
     console.error("Error in facebookCallback:", error);
-    res.redirect(`${config.origin}/profile?error=Error in connecting Facebook account!`);
+    res.redirect(
+      `${config.origin}/profile?error=Error in connecting Facebook account!`,
+    );
   }
 });
 
@@ -248,116 +262,267 @@ const fetchFacebookInsights = catchAsyncError(async (req, res, next) => {
   });
 });
 
-// instagram 
+// instagram
 const instagramConnect = catchAsyncError(async (req, res, next) => {
   const url = instagramClient.authUrl(req.userId);
   res.json({ url });
 });
 
 const instagramCallback = catchAsyncError(async (req, res, next) => {
-  try{
-  const code = req.query.code;
-  const userId = req.query.state;
-  const user = await UserModel.findById(userId);
-  if(!user){
-    res.redirect(`${config.origin}/profile?error=User not found!`);
-    return;
-  }
+  try {
+    const code = req.query.code;
+    if (!code) {
+      res.redirect(
+        `${config.origin}/profile?error=Authorization code missing!`,
+      );
+      return;
+    }
+    const userId = req.query.state;
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      res.redirect(`${config.origin}/profile?error=User not found!`);
+      return;
+    }
 
-  const tokenData = await instagramClient.exchangeCodeForToken(code);
-  console.log("tokenData", tokenData);
+    const tokenData = await instagramClient.exchangeCodeForToken(code);
+    // console.log("tokenData", tokenData);
 
-  const longLivedToken = await instagramClient.exchangeForLongLivedToken(tokenData.access_token);
-  console.log("longLivedToken", longLivedToken);
-
-  const pagesWithInstagram = await instagramClient.getPagesWithInstagram(longLivedToken.access_token);
-  console.log("pagesWithInstagram", pagesWithInstagram);
-
-  for(const page of pagesWithInstagram || []){
-    const existingIndex = user.socialAccounts.findIndex(
-      (s) => s.provider === "instagram" && s.providerId === page.id
+    const longLivedToken = await instagramClient.exchangeForLongLivedToken(
+      tokenData.access_token,
     );
-    const instagramAccount = page.instagram_business_account;
-    const profile = await instagramClient.getInstagramProfile(instagramAccount.id, page.access_token);
-    // console.log("profile", profile);
+    // console.log("longLivedToken", longLivedToken);
+
+    const pagesWithInstagram = await instagramClient.getPagesWithInstagram(
+      longLivedToken.access_token,
+    );
+    // console.log("pagesWithInstagram", pagesWithInstagram);
+
+    for (const page of pagesWithInstagram || []) {
+      const instagramAccount = page.instagram_business_account;
+      const profile = await instagramClient.getInstagramProfile(
+        instagramAccount.id,
+        page.access_token,
+      );
+      // console.log("profile", profile);
+      const existingIndex = user.socialAccounts.findIndex(
+        (s) =>
+          s.provider === "instagram" && s.providerId === instagramAccount?.id,
+      );
+
+      const account = {
+        provider: "instagram",
+        providerId: instagramAccount?.id,
+        accessToken: page.access_token,
+        refreshToken: longLivedToken?.access_token,
+        expiresAt: longLivedToken?.expires_in
+          ? new Date(Date.now() + longLivedToken.expires_in * 1000)
+          : null,
+        scope: [
+          "instagram_basic",
+          "instagram_manage_insights",
+          "instagram_manage_comments",
+          "instagram_manage_messages",
+          "business_management",
+          "pages_manage_metadata",
+        ],
+        linked: true,
+        title: profile?.username,
+        image: profile?.profile_picture_url,
+        meta: {
+          category: profile?.category,
+          followersCount: profile?.followers_count,
+          pageId: page?.id,
+          pageName: page?.name,
+        },
+      };
+      if (existingIndex !== -1) {
+        user.socialAccounts[existingIndex] = {
+          // eslint-disable-next-line node/no-unsupported-features/es-syntax
+          ...user.socialAccounts[existingIndex].toObject(),
+          // eslint-disable-next-line node/no-unsupported-features/es-syntax
+          ...account,
+        };
+      } else {
+        user.socialAccounts.push(account);
+      }
+    }
+
+    await user.save();
+    res.redirect(`${config.origin}/profile`);
+  } catch (error) {
+    console.error("Error in instagramCallback:", error);
+    res.redirect(
+      `${config.origin}/profile?error=Error in connecting Instagram account!`,
+    );
+  }
+});
+
+// tiktok
+const tiktokConnect = catchAsyncError(async (req, res, next) => {
+  const url = tiktokClient.authUrl(req.userId);
+  res.json({ url });
+});
+
+const tiktokCallback = catchAsyncError(async (req, res, next) => {
+  try {
+    const code = req.query.code;
+    if (!code) {
+      res.redirect(
+        `${config.origin}/profile?error=Authorization code missing!`,
+      );
+      return;
+    }
+
+    const [userId, codeVerifier] = req.query.state.split(":");
+    if (!userId || !codeVerifier) {
+      res.redirect(`${config.origin}/profile?error=Invalid state!`);
+      return;
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      res.redirect(`${config.origin}/profile?error=User not found!`);
+      return;
+    }
+
+    const tokenData = await tiktokClient.exchangeCodeForToken(
+      code,
+      codeVerifier,
+    );
+    console.log("tokenData", tokenData);
+
+    if (tokenData.error) {
+      console.error("TikTok token error:", tokenData);
+      res.redirect(
+        `${config.origin}/profile?error=Failed to get TikTok token!`,
+      );
+      return;
+    }
+
+    // Get user info
+    const userInfo = await tiktokClient.getUserInfo(tokenData.access_token);
+    console.log("TikTok userInfo:", userInfo);
+
+    if (!userInfo) {
+      res.redirect(
+        `${config.origin}/profile?error=Failed to get TikTok user info!`,
+      );
+      return;
+    }
+
+    // Check if account already exists
+    const existingIndex = user.socialAccounts.findIndex(
+      (s) => s.provider === "tiktok" && s.providerId === userInfo.open_id,
+    );
 
     const account = {
-      provider: "instagram",
-      providerId: instagramAccount?.id,
-      accessToken: page.access_token,
-      refreshToken: longLivedToken?.access_token,
-      expiresAt: longLivedToken?.expires_in
-      ? new Date(Date.now() + longLivedToken.expires_in * 1000) : null,
-      scope: ["instagram_basic", "instagram_manage_insights", "instagram_manage_comments", "instagram_manage_messages", "business_management", "pages_manage_metadata"],
+      provider: "tiktok",
+      providerId: userInfo.open_id,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: tokenData.expires_in
+        ? new Date(Date.now() + tokenData.expires_in * 1000)
+        : null,
+      scope: tokenData.scope?.split(",") || [],
       linked: true,
-      title: profile?.username,
-      image: profile?.profile_picture_url,
-      meta: { category: profile?.category, followersCount: profile?.followers_count, pageId: page?.id, pageName: page?.name },
-    }
-    if(existingIndex !== -1){
+      title: userInfo.display_name,
+      image: userInfo.avatar_url,
+      meta: {
+        unionId: userInfo.union_id,
+        followerCount: userInfo.follower_count,
+        followingCount: userInfo.following_count,
+        likesCount: userInfo.likes_count,
+        videoCount: userInfo.video_count,
+      },
+    };
+
+    if (existingIndex !== -1) {
       user.socialAccounts[existingIndex] = {
         // eslint-disable-next-line node/no-unsupported-features/es-syntax
         ...user.socialAccounts[existingIndex].toObject(),
         // eslint-disable-next-line node/no-unsupported-features/es-syntax
         ...account,
       };
-    }else{
+    } else {
       user.socialAccounts.push(account);
-    }    
+    }
+    await user.save();
+    res.redirect(`${config.origin}/profile`);
+  } catch (error) {
+    console.error("Error in tiktokCallback:", error);
+    res.redirect(
+      `${config.origin}/profile?error=Error in connecting TikTok account!`,
+    );
   }
-
-  await user.save();
-  res.redirect(`${config.origin}/profile`);
-  }catch(error){
-    console.error("Error in instagramCallback:", error);
-    res.redirect(`${config.origin}/profile?error=Error in connecting Instagram account!`);
-  }
-  
 });
 
+// common
+const fetchReachLikeCommentLastTwoMonthsData = catchAsyncError(
+  async (req, res, next) => {
+    const id = req.userId;
+    const data =
+      await SocialConnectionServices.fetchReachLikeCommentLastTwoMonthsData(id);
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message:
+        "Reach, like, comment last two months data fetched successfully!",
+      data: data,
+    });
+  },
+);
 
-// common 
-
-const fetchReachLikeCommentLastTwoMonthsData = catchAsyncError(async (req, res, next) => {
+const fetchLast12MonthsChartData = catchAsyncError(async (req, res, next) => {
   const id = req.userId;
-  const data = await SocialConnectionServices.fetchReachLikeCommentLastTwoMonthsData(id);
+  const data = await SocialConnectionServices.fetchLast12MonthsChartData(id);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Reach, like, comment last two months data fetched successfully!",
-    data: data
+    message: "Last 12 months chart data fetched successfully!",
+    data: data,
+  });
+});
+
+const fetchFollowersLast12Months = catchAsyncError(async (req, res, next) => {
+  const id = req.userId;
+  const data = await SocialConnectionServices.fetchFollowersLast12Months(id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Followers per account fetched successfully!",
+    data: data,
   });
 });
 
 const disconnectAccount = catchAsyncError(async (req, res, next) => {
   const id = req.userId;
-  const {provider, providerId} = req.params;
+  const { provider, providerId } = req.params;
 
   const user = await UserModel.findById(id);
-  if(!user){
+  if (!user) {
     throw new ErrorHandler("User not found!", httpStatus.NOT_FOUND);
   }
 
   const account = user.socialAccounts.find(
-    (s) => s.provider === provider && s.providerId === providerId
+    (s) => s.provider === provider && s.providerId === providerId,
   );
 
-  if(!account){
+  if (!account) {
     throw new ErrorHandler("Account not found!", httpStatus.NOT_FOUND);
   }
 
   user.socialAccounts = user.socialAccounts.filter(
-    (s) => !(s.provider === provider && s.providerId === providerId)
+    (s) => !(s.provider === provider && s.providerId === providerId),
   );
 
   await user.save();
-  
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    // delete with name 
+    // delete with name
     message: `Account disconnected successfully!`,
-    data: user.socialAccounts
+    data: user.socialAccounts,
   });
 });
 
@@ -373,5 +538,9 @@ const SocialConnectionController = {
   disconnectAccount,
   instagramConnect,
   instagramCallback,
+  tiktokConnect,
+  tiktokCallback,
+  fetchLast12MonthsChartData,
+  fetchFollowersLast12Months,
 };
 module.exports = SocialConnectionController;

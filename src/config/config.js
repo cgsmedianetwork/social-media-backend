@@ -57,6 +57,12 @@ module.exports = {
     access_token: process.env.INSTAGRAM_ACCESS_TOKEN,
   },
 
+  tiktok: {
+    client_key: process.env.TIKTOK_CLIENT_KEY,
+    client_secret: process.env.TIKTOK_CLIENT_SECRET,
+    redirect_uri: process.env.TIKTOK_REDIRECT_URI,
+  },
+
   imgbb_key: process.env.IMGBB_KEY,
 
   googleClientID: process.env.GOOGLE_CLIENT_ID,

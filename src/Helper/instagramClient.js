@@ -1,5 +1,6 @@
 const { default: axios } = require("axios");
 const config = require("../config/config");
+const UserModel = require("../app/modules/user/user.model");
 
 const version = config.facebook.graph_api_version || "v18.0";
 const graphBase = `https://graph.facebook.com/${version}`;
@@ -107,6 +108,51 @@ const getInstagramProfile = async (instagramAccountId, accessToken) => {
     }
   };
 
+async function getInstagramAccount(userId, providerId = null) {
+    const user = await UserModel.findById(userId);
+    const acc = providerId
+      ? user.socialAccounts.find((s) => s.provider === "instagram" && s.providerId === providerId)
+      : user.socialAccounts.find((s) => s.provider === "instagram");
+    if (!acc) {
+      return null;
+    }
+    return { user, acc };
+}
+
+const getInstagramMediaEngagement = async (instagramAccountId, accessToken, since, until) => {
+  try {
+    let totalLikes = 0
+    let totalComments = 0
+    const sinceDate = since instanceof Date ? since : new Date(since * 1000);
+    const untilDate = until instanceof Date ? until : new Date(until * 1000);
+    let nextUrl = `${graphBase}/${instagramAccountId}/media?fields=id,timestamp,like_count,comments_count&access_token=${accessToken}&limit=50`
+
+    while(nextUrl){
+      const {data} = await axios.get(nextUrl);
+
+      for(const media of data.data || []){
+        const mediaDate = new Date(media.timestamp);
+
+        if(mediaDate < sinceDate){
+          return {likes: totalLikes, comments: totalComments};
+        }
+
+        if(mediaDate <= untilDate){
+          totalLikes += media.like_count || 0;
+          totalComments += media.comments_count || 0;
+        }
+        
+      }
+      nextUrl = data.paging?.next || null;
+    }
+
+    return {likes: totalLikes, comments: totalComments};
+  } catch (error) {
+    console.error("Error getting Instagram media engagement:", error.response?.data || error.message);
+    return {likes: 0, comments: 0};
+  }
+}
+
   const getInstagramAccountInsights = async (
     instagramAccountId,
     accessToken,
@@ -144,6 +190,8 @@ const getInstagramProfile = async (instagramAccountId, accessToken) => {
     getPagesWithInstagram,
     getInstagramProfile,
     getInstagramAccountInsights,
+    getInstagramAccount,
+    getInstagramMediaEngagement
   }
 
   module.exports = instagramClient;
