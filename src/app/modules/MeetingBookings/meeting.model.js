@@ -14,14 +14,21 @@ const meetingBookingsSchema = new mongoose.Schema(
     title: {
       type: String,
     },
-    time: {
+    startTime: {
+      type: Date,
+      required: true,
+    },
+    endTime: {
       type: Date,
       required: true,
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled", "completed"],
+      enum: ["pending", "confirmed", "rejected", "completed"],
       default: "pending",
+    },
+    meetingLink: {
+      type: String,
     },
     description: {
       type: String,
@@ -34,12 +41,12 @@ const meetingBookingsSchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 const MeetingBookingsModal = mongoose.model(
   "MeetingBookings",
-  meetingBookingsSchema
+  meetingBookingsSchema,
 );
 
 module.exports = MeetingBookingsModal;

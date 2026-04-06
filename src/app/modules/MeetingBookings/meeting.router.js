@@ -10,7 +10,7 @@ router.post(
   "/create",
   authVerification,
   validateRequest(JoiMeetingValidationSchema.meetingCreateValidationSchema),
-  meetingBookingController.createMeetingBooking
+  meetingBookingController.createMeetingBooking,
 );
 
 const meetingBookingRouter = router;
