@@ -101,8 +101,8 @@ const forgotPassOtpSend = catchAsyncError(async (req, res, next) => {
     return next(
       new ErrorHandler(
         "User Not Found! please Signup First!",
-        httpStatus.NOT_FOUND
-      )
+        httpStatus.NOT_FOUND,
+      ),
     );
   }
   let sendOTP;
@@ -123,7 +123,7 @@ const forgotPassOtpSend = catchAsyncError(async (req, res, next) => {
     //? check validation for create otp for loginRegistation phone number varified
     const { error, value } =
       JoiUserValidationSchema.phoneOTPVarificationSchema.validate(
-        requestPayload
+        requestPayload,
       );
 
     if (error) {
@@ -170,7 +170,7 @@ const resetPasswordOtpVarification = catchAsyncError(async (req, res) => {
   console.log(
     "result in reset password otp varification:",
     result,
-    result?.userNumber
+    result?.userNumber,
   );
   const sessionId = uuidv4();
   if (result) {
@@ -371,7 +371,7 @@ const allUserReportForDashboard = catchAsyncError(async (req, res) => {
   const result = await userServices.userReportFromDB(
     req,
     filters,
-    paginationOptions
+    paginationOptions,
   );
 
   res.status(201).json({
@@ -416,7 +416,7 @@ const addNewField = catchAsyncError(async (req, res) => {
   const addNewField = await UserModel.updateMany(
     {},
     { $set: { device: "web" } },
-    { new: true }
+    { new: true },
   );
 
   res.status(201).json({
@@ -465,7 +465,7 @@ const updateUserProfile = catchAsyncError(async (req, res) => {
   req.body.icon = { link: req.uploadedImageUrl };
   const result = await userServices.updateUserProfileIntoDB(
     req.userId,
-    updateData
+    updateData,
   );
 
   sendResponse(res, {
@@ -490,7 +490,6 @@ const updateUserProfile = catchAsyncError(async (req, res) => {
 //   });
 // });
 
-// logout
 const logout = catchAsyncError(async (req, res) => {
   res.clearCookie("accessToken");
   res.clearCookie("refreshToken");
@@ -499,6 +498,17 @@ const logout = catchAsyncError(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Logged out successfully",
+  });
+});
+
+const getTotalUserSummary = catchAsyncError(async (req, res) => {
+  const result = await userServices.totalUserSummaryFromDB();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Total user summary fetched successfully",
+    data: result,
   });
 });
 const userController = {
@@ -523,5 +533,6 @@ const userController = {
   logout,
   verifyRefreshToken,
   getAdminAndSubAdmin,
+  getTotalUserSummary,
 };
 module.exports = userController;

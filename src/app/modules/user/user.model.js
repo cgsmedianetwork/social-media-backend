@@ -1,23 +1,22 @@
 const mongoose = require("mongoose");
 
-const socialAccountSchema = new mongoose.Schema(
-  {
-    provider: {
-      type: String,
-      enum: ["youtube", "facebook", "instagram", "tiktok"],
-    },
-    providerId: { type: String },
-    accessToken: { type: String },
-    refreshToken: { type: String },
-    expiresAt: { type: Date }, 
-    scope: { type: [String] },
-    tokenType: { type: String },
-    title: { type: String },
-    image: { type: String },
-    linked: { type: Boolean, default: false },
-    meta: { type: mongoose.Schema.Types.Mixed }, // any platform-specific data
+const socialAccountSchema = new mongoose.Schema({
+  provider: {
+    type: String,
+    enum: ["youtube", "facebook", "instagram", "tiktok"],
   },
-);
+  providerId: { type: String },
+  accessToken: { type: String },
+  refreshToken: { type: String },
+  expiresAt: { type: Date },
+  scope: { type: [String] },
+  tokenType: { type: String },
+  title: { type: String },
+  image: { type: String },
+  connectedAt: { type: Date, default: Date.now },
+  linked: { type: Boolean, default: false },
+  meta: { type: mongoose.Schema.Types.Mixed }, // any platform-specific data
+});
 const userModelSchema = mongoose.Schema(
   {
     name: {
@@ -72,7 +71,7 @@ const userModelSchema = mongoose.Schema(
     },
     socialAccounts: [socialAccountSchema],
   },
-  { timestamps: true, versionKey: false }
+  { timestamps: true, versionKey: false },
 );
 
 const UserModel = mongoose.model("User", userModelSchema);

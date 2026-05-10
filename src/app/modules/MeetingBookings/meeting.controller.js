@@ -12,13 +12,53 @@ const createMeetingBooking = catchAsyncError(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Meeting booked successfully",
+    message: "Meeting requested successfully!",
     data: result,
   });
 });
 
+const getUserMeetingBookings = catchAsyncError(async (req, res) => {
+  const userId = req.userId;
+  // console.log("userId", userId);
+  const { startDate, endDate } = req.query;
+  // console.log("startDate and endDate", startDate, endDate);
+  const result = await meetingBookingServices.getUserMeetingBookings(
+    userId,
+    startDate,
+    endDate,
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Meeting bookings fetched successfully!",
+    data: result,
+  });
+});
+
+const getMeetingBookingByUserIdAndMonthAndYear = catchAsyncError(
+  async (req, res) => {
+    const userId = req.userId;
+    const month = req.query.month;
+    const year = req.query.year;
+    const result =
+      await meetingBookingServices.getMeetingBookingByUserIdAndMonthAndYear(
+        userId,
+        month,
+        year,
+      );
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Meeting bookings fetched successfully!",
+      data: result,
+    });
+  },
+);
+
 const meetingBookingController = {
   createMeetingBooking,
+  getMeetingBookingByUserIdAndMonthAndYear,
+  getUserMeetingBookings,
 };
 
 module.exports = meetingBookingController;

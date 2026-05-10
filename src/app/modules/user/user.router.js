@@ -6,7 +6,6 @@ const userController = require("./user.controller");
 const authVerification = require("../../../Middleware/authVarification");
 const UploadToImageServerMiddleware = require("../../../Middleware/UploadToImageServerMiddleware");
 
-
 const {
   uploadImgbb,
   uploadToImgbb,
@@ -17,25 +16,25 @@ const router = express.Router();
 router.post(
   "/signup/init",
   validateRequest(JoiUserValidationSchema.signupInitSchema),
-  userController.sendSignUpInitOTP
+  userController.sendSignUpInitOTP,
 );
 
 router.post(
   "/signup/resend-otp",
   validateRequest(JoiUserValidationSchema.otpResendSchema),
-  userController.resendSignUpInitOTP
+  userController.resendSignUpInitOTP,
 );
 
 router.post(
   "/verify-otp",
   validateRequest(JoiUserValidationSchema.otpVarificationSchema),
-  userController.otpVarificationForRegi
+  userController.otpVarificationForRegi,
 );
 
 router.post(
   "/login",
   validateRequest(JoiUserValidationSchema.loginSchema),
-  userController.loginUserUsingPhoneAndPassword
+  userController.loginUserUsingPhoneAndPassword,
 );
 
 router.post(
@@ -43,7 +42,7 @@ router.post(
   // originMiddleware,
   // verifyApiKey,
   validateRequest(JoiUserValidationSchema.phoneNumberOTPSchema),
-  userController.forgotPassOtpSend
+  userController.forgotPassOtpSend,
 );
 
 router.post(
@@ -51,7 +50,7 @@ router.post(
   // originMiddleware,
   // verifyApiKey,
   validateRequest(JoiUserValidationSchema.otpVerificationPassswordSchema),
-  userController.resetPasswordOtpVarification
+  userController.resetPasswordOtpVarification,
 );
 
 router.post(
@@ -59,19 +58,19 @@ router.post(
   // originMiddleware,
   // verifyApiKey,
   validateRequest(JoiUserValidationSchema.resetPasswordSchema),
-  userController.setNewPasswordAndLogin
+  userController.setNewPasswordAndLogin,
 );
 
 router.post(
   "/refresh-token",
   // authVerification,
-  userController.refreshToken
+  userController.refreshToken,
 );
 
 router.post(
   "/logout",
   // authVerification,
-  userController.logout
+  userController.logout,
 );
 
 router.patch(
@@ -80,7 +79,7 @@ router.patch(
   uploadImgbb.single("image"),
   uploadToImgbb,
   validateRequest(JoiUserValidationSchema.userUpdateSchema),
-  userController.updateUser
+  userController.updateUser,
 );
 
 router.get("/verify-token", userController.verifyRefreshToken);
@@ -88,13 +87,13 @@ router.get("/verify-token", userController.verifyRefreshToken);
 router.get(
   "/admin-and-subadmin",
   authVerification,
-  userController.getAdminAndSubAdmin
+  userController.getAdminAndSubAdmin,
 );
 
 router.post(
   "/create",
   validateRequest(JoiUserValidationSchema.userCreateSchema),
-  userController.createUser
+  userController.createUser,
 );
 
 router.post(
@@ -102,22 +101,26 @@ router.post(
   // originMiddleware,
   // verifyApiKey,
   validateRequest(JoiUserValidationSchema.phoneNumberRequiredSchema),
-  userController.checkUserExistusingPhone
+  userController.checkUserExistusingPhone,
+);
+
+router.get(
+  "/total-user-summary",
+  authVerification,
+  userController.getTotalUserSummary,
 );
 
 router.patch(
   "/img-upload",
   authVerification,
   UploadToImageServerMiddleware("profile_image"),
-  userController.updateUserProfile
+  userController.updateUserProfile,
 );
-
-
 
 router.post(
   "/isExistSingleUser",
   // validateRequest(JoiUserValidationSchema.phoneNumberRequiredSchema),
-  userController.isSingleExistUser
+  userController.isSingleExistUser,
 );
 // router.get("/hourly-signup-user", userController.getSignUpUserForHourly);
 // router.get("/user-report", userController.allUserReportForDashboard);

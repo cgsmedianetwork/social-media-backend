@@ -19,6 +19,7 @@ const PendingUserModel = require("../PendingUser/PendingUser.model");
 const { v4: uuidv4 } = require("uuid");
 const ResetPasswordSession = require("../ResetPasswordSession/ResetPasswordSession.model");
 const jwt = require("jsonwebtoken");
+const calculateTrend = require("../../../Helper/calculateTrends");
 
 const sendSignUpInitOTP = async (payload) => {
   const { phone, email, password, terms } = payload;
@@ -27,7 +28,7 @@ const sendSignUpInitOTP = async (payload) => {
   if (isExist) {
     throw new ErrorHandler(
       `This Phone Number is Already Exist!`,
-      httpStatus.CONFLICT
+      httpStatus.CONFLICT,
     );
   }
   const isExistPendingUser = await PendingUserModel.findOne({ phone });
@@ -52,7 +53,7 @@ const sendSignUpInitOTP = async (payload) => {
   if (error) {
     throw new ErrorHandler(
       error || "something went Wrong",
-      httpStatus.BAD_REQUEST
+      httpStatus.BAD_REQUEST,
     );
   } else if (value) {
     //logging the value
@@ -115,7 +116,7 @@ const resendSignUpInitOTP = async (sessionId) => {
   if (!sessionId) {
     throw new ErrorHandler(
       "Internal Server Error!",
-      httpStatus.INTERNAL_SERVER_ERROR
+      httpStatus.INTERNAL_SERVER_ERROR,
     );
   }
 
@@ -123,7 +124,7 @@ const resendSignUpInitOTP = async (sessionId) => {
   if (!isExistSession) {
     throw new ErrorHandler(
       "Internal Server Error!",
-      httpStatus.INTERNAL_SERVER_ERROR
+      httpStatus.INTERNAL_SERVER_ERROR,
     );
   }
 
@@ -147,7 +148,7 @@ const resendSignUpInitOTP = async (sessionId) => {
   if (error) {
     throw new ErrorHandler(
       error || "something went Wrong",
-      httpStatus.BAD_REQUEST
+      httpStatus.BAD_REQUEST,
     );
   } else if (value) {
     prevOTP = await otpServices.lastOTPFromDB({
@@ -206,12 +207,12 @@ const otpVerificationAndCreateUser = async (payload) => {
     accessToken = await jwtHandle(
       { _id: userData?._id },
       config.jwt_key,
-      config.jwt_token_expire
+      config.jwt_token_expire,
     );
     refreshToken = await jwtHandle(
       { _id: userData?._id },
       config.jwt_refresh_key,
-      config.jwt_refresh_token_expire
+      config.jwt_refresh_token_expire,
     );
   }
 
@@ -262,12 +263,12 @@ const loginUserInToDB = async (payload) => {
   const accessToken = await jwtHandle(
     { _id: _id },
     config.jwt_key,
-    config.jwt_token_expire
+    config.jwt_token_expire,
   );
   const refreshToken = await jwtHandle(
     { _id: _id },
     config.jwt_refresh_key,
-    config.jwt_refresh_token_expire
+    config.jwt_refresh_token_expire,
   );
   //did this for not getting user image to set in navbar
 
@@ -293,7 +294,7 @@ const updateUserPassword = async (payload) => {
   if (password !== confirmPassword) {
     throw new ErrorHandler(
       "Password and confirm password do not match",
-      httpStatus.BAD_REQUEST
+      httpStatus.BAD_REQUEST,
     );
   }
 
@@ -307,13 +308,13 @@ const updateUserPassword = async (payload) => {
   const result = await UserModel.findOneAndUpdate(
     { phone: phone },
     { $set: { password: hashPassword } },
-    { new: true }
+    { new: true },
   );
 
   if (!result) {
     throw new ErrorHandler(
       "Failed to update user password",
-      httpStatus.BAD_REQUEST
+      httpStatus.BAD_REQUEST,
     );
   }
   // let access_token, refresh_token;
@@ -364,7 +365,7 @@ const refreshTokenFromDB = async (token) => {
     const accessToken = await jwtHandle(
       { _id: isUserExist?._id },
       config.jwt_key,
-      config.jwt_token_expire
+      config.jwt_token_expire,
     );
 
     return {
@@ -401,7 +402,7 @@ const verifyRefreshTokenFromDB = async (token) => {
     if (!token) {
       throw new ErrorHandler(
         "Refresh Token is required",
-        httpStatus.BAD_REQUEST
+        httpStatus.BAD_REQUEST,
       );
     }
     const decoded = jwt.verify(token, config.jwt_refresh_key);
@@ -427,7 +428,7 @@ const getAdminAndSubAdminFromDB = async () => {
   if (!admins) {
     throw new ErrorHandler(
       "No admins or subadmins found",
-      httpStatus.NOT_FOUND
+      httpStatus.NOT_FOUND,
     );
   }
   const adminsData = admins.map((admin) => {
@@ -449,7 +450,7 @@ const getUserUsingPhoneFromDB = async (phone) => {
   if (isExist) {
     throw new ErrorHandler(
       `${isExist.phone} This Phone Number is Exist! please use another!`,
-      httpStatus.CONFLICT
+      httpStatus.CONFLICT,
     );
   }
 
@@ -474,7 +475,7 @@ const getUserUsingPhoneFromDB = async (phone) => {
   if (error) {
     throw new ErrorHandler(
       `${error}` || "something went Wrong",
-      httpStatus[400]
+      httpStatus[400],
     );
   } else if (value) {
     prevOTP = await otpServices.lastOTPFromDB({
@@ -527,7 +528,7 @@ const createUserIntoDB = async (payload) => {
     // console.log("first");
     throw new ErrorHandler(
       `${isExist.phone} and ${isExist.email}   is Exist! please use another!`,
-      httpStatus.CONFLICT
+      httpStatus.CONFLICT,
     );
   }
   const hashPassword = await bcrypt.hash(payload.password, 10);
@@ -545,13 +546,13 @@ const createUserIntoDB = async (payload) => {
     accessToken = await jwtHandle(
       { _id: userData?._id, phone: userData?.phone },
       config.jwt_key,
-      config.jwt_token_expire
+      config.jwt_token_expire,
     );
 
     refreshToken = await jwtHandle(
       { _id: userData?._id, phone: userData?.phone },
       config.jwt_refresh_key,
-      config.jwt_refresh_token_expire
+      config.jwt_refresh_token_expire,
     );
   }
   // console.log(refreshToken);
@@ -739,7 +740,7 @@ const userReportFromDB = async (req, filters, paginationOptions) => {
   // Dynamic search added
   const dynamicSearchQuery = searchHelper.createSearchQuery(
     searchTerm,
-    userConstant.userSearchableFields
+    userConstant.userSearchableFields,
   );
   if (Object.keys(dynamicSearchQuery).length > 0) {
     matchAnd.push(dynamicSearchQuery);
@@ -829,7 +830,7 @@ const userReportFromDB = async (req, filters, paginationOptions) => {
         TotalOrders: 1,
         totalPurchaseAmount: 1,
       },
-    }
+    },
   );
   totalPipeline.push(
     joinQueryForOrderDetails,
@@ -891,7 +892,7 @@ const userReportFromDB = async (req, filters, paginationOptions) => {
         totalPurchaseAmount: 1,
       },
     },
-    { $count: "count" }
+    { $count: "count" },
   );
 
   const dynamicSorting = sortingHelper.createDynamicSorting(sortBy, sortOrder);
@@ -1169,7 +1170,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
             ];
 
             const filledFields = personalFields.filter(
-              (field) => !isEmptyField(currentProfile[field])
+              (field) => !isEmptyField(currentProfile[field]),
             ).length;
 
             if (filledFields > 0) {
@@ -1177,8 +1178,8 @@ const updateUserProfileIntoDB = async (userId, payload) => {
                 weights[key] / 2,
                 Math.min(
                   weights[key] * (filledFields / personalFields.length),
-                  weights[key]
-                )
+                  weights[key],
+                ),
               );
             }
             break;
@@ -1190,12 +1191,12 @@ const updateUserProfileIntoDB = async (userId, payload) => {
           case "skills":
             if (Array.isArray(value) && value.length > 0) {
               const skillCount = value.filter(
-                (skill) => !isEmptyField(skill)
+                (skill) => !isEmptyField(skill),
               ).length;
               const minSkillsForFullScore = 3;
               sectionScore = Math.min(
                 weights[key] * (skillCount / minSkillsForFullScore),
-                weights[key]
+                weights[key],
               );
             }
             break;
@@ -1203,7 +1204,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
           case "workExperiences":
             if (Array.isArray(value)) {
               const validExperiences = value.filter(
-                (exp) => exp?.title && (exp?.description || exp?.company)
+                (exp) => exp?.title && (exp?.description || exp?.company),
               );
 
               // Modified scoring for work experiences
@@ -1222,7 +1223,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
               const validProjects = value.filter(
                 (proj) =>
                   (proj?.title || proj?.project_title || proj?.project_name) &&
-                  (proj?.description || proj?.github_url || proj?.project_url)
+                  (proj?.description || proj?.github_url || proj?.project_url),
               );
 
               // Modified scoring for projects
@@ -1239,7 +1240,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
           case "education":
             if (Array.isArray(value)) {
               const validEducation = value.filter(
-                (edu) => edu?.institution || edu?.degree || edu?.field
+                (edu) => edu?.institution || edu?.degree || edu?.field,
               );
               sectionScore = validEducation.length > 0 ? weights[key] : 0;
             }
@@ -1248,7 +1249,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
           case "certifications":
             if (Array.isArray(value)) {
               const validCerts = value.filter(
-                (cert) => cert?.name || cert?.issuer || cert?.issueDate
+                (cert) => cert?.name || cert?.issuer || cert?.issueDate,
               );
               sectionScore = validCerts.length > 0 ? weights[key] : 0;
             }
@@ -1258,7 +1259,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
             if (Array.isArray(value)) {
               const validActivities = value.filter(
                 (activity) =>
-                  activity?.name || activity?.description || activity?.title
+                  activity?.name || activity?.description || activity?.title,
               );
               sectionScore = validActivities.length > 0 ? weights[key] : 0;
             }
@@ -1294,7 +1295,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
       ];
 
       const isUpdatingRelevantFields = Object.keys(candidateProfileFields).some(
-        (key) => relevantFields.includes(key)
+        (key) => relevantFields.includes(key),
       );
 
       if (isUpdatingRelevantFields || !existingProfile) {
@@ -1310,7 +1311,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
 
         const profileScore = calculateProfileComplete(
           existingData,
-          candidateProfileFields
+          candidateProfileFields,
         );
         // console.log("Calculated profile score:", profileScore);
 
@@ -1340,7 +1341,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
       updatedUser = await UserModel.findByIdAndUpdate(
         userId,
         { $set: userFields },
-        { new: true, runValidators: true, session }
+        { new: true, runValidators: true, session },
       );
       // console.log("User document updated:", updatedUser);
     }
@@ -1359,7 +1360,7 @@ const updateUserProfileIntoDB = async (userId, payload) => {
         updatedProfile = await CandidateProfileModel.findOneAndUpdate(
           { candidateId: userId },
           { $set: candidateProfileFields },
-          { new: true, runValidators: true, session }
+          { new: true, runValidators: true, session },
         );
         // console.log("Existing profile updated:", updatedProfile);
       } else {
@@ -1441,6 +1442,114 @@ const signUpFromDBUsingDate = async ({ startDate, endDate }) => {
   return result;
 };
 
+const totalUserSummaryFromDB = async () => {
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const [userCounts] = await UserModel.aggregate([
+    {
+      $facet: {
+        total: [{ $count: "count" }],
+        currentMonth: [
+          { $match: { createdAt: { $gte: currentMonthStart, $lte: now } } },
+          { $count: "count" },
+        ],
+        lastMonth: [
+          {
+            $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } },
+          },
+          { $count: "count" },
+        ],
+      },
+    },
+  ]);
+
+  const accountCounts = await UserModel.aggregate([
+    { $unwind: "$socialAccounts" },
+    {
+      $match: {
+        "socialAccounts.linked": true,
+        "socialAccounts.provider": {
+          $in: ["facebook", "youtube", "instagram", "tiktok"],
+        },
+      },
+    },
+    {
+      $addFields: {
+        accountConnectedAt: {
+          $ifNull: ["$socialAccounts.connectedAt", "$createdAt"],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$socialAccounts.provider",
+        total: { $sum: 1 },
+        currentMonth: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $gte: ["$accountConnectedAt", currentMonthStart] },
+                  { $lte: ["$accountConnectedAt", now] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+        lastMonth: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $gte: ["$accountConnectedAt", lastMonthStart] },
+                  { $lte: ["$accountConnectedAt", lastMonthEnd] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  const formatMetric = (total, currentMonth, lastMonth) => ({
+    total: total || 0,
+    trend: calculateTrend(currentMonth || 0, lastMonth || 0),
+  });
+
+  const accountsByProvider = accountCounts.reduce((acc, item) => {
+    acc[item._id] = formatMetric(item.total, item.currentMonth, item.lastMonth);
+    return acc;
+  }, {});
+
+  const totalUser = userCounts?.total?.[0]?.count || 0;
+  const currentMonthUsers = userCounts?.currentMonth?.[0]?.count || 0;
+  const lastMonthUsers = userCounts?.lastMonth?.[0]?.count || 0;
+
+  return {
+    totalUser: formatMetric(totalUser, currentMonthUsers, lastMonthUsers),
+    facebook: accountsByProvider.facebook || formatMetric(0, 0, 0),
+    youtube: accountsByProvider.youtube || formatMetric(0, 0, 0),
+    instagram: accountsByProvider.instagram || formatMetric(0, 0, 0),
+    tiktok: accountsByProvider.tiktok || formatMetric(0, 0, 0),
+  };
+};
+
 const userServices = {
   getUserUsingPhoneFromDB,
   updateUserProfileIntoDB,
@@ -1461,6 +1570,7 @@ const userServices = {
   loggedInUserFromDB,
   getAdminAndSubAdminFromDB,
   verifyRefreshTokenFromDB,
+  totalUserSummaryFromDB,
 };
 
 module.exports = userServices;

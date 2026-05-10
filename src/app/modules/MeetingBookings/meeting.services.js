@@ -1,6 +1,8 @@
 const httpStatus = require("http-status");
 const ErrorHandler = require("../../../ErrorHandler/errorHandler");
 const MeetingBookingsModal = require("./meeting.model");
+const { default: mongoose } = require("mongoose");
+const moment = require("moment");
 
 //create a meeting booking
 const createMeetingBookingIntoDB = async (payload) => {
@@ -35,6 +37,36 @@ const createMeetingBookingIntoDB = async (payload) => {
   return newMeetingBooking;
 };
 
+//get user meeting bookings
+const getUserMeetingBookings = async (userId, startDate, endDate) => {
+  console.log("startDate and endDate", startDate, endDate);
+  // if (isNaN(startDate) || isNaN(endDate)) {
+  //   throw new ErrorHandler("Invalid date range", httpStatus.BAD_REQUEST);
+  // }
+  // if startDate and endDate not found then it would be current month fistDate and lastDate
+  if (!startDate && !endDate) {
+    const startOfMonth = moment().startOf("month").toDate();
+    const endOfMonth = moment().endOf("month").toDate();
+    startDate = startOfMonth;
+    endDate = endOfMonth;
+  }
+  //want to populate meetingWith user details
+  const meetingBookings = await MeetingBookingsModal.find({
+    $or: [
+      { userId: new mongoose.Types.ObjectId(userId) },
+      { meetingWith: new mongoose.Types.ObjectId(userId) },
+    ],
+    startTime: { $lte: new Date(endDate) },
+    endTime: { $gte: new Date(startDate) },
+    isActive: true,
+  }).populate({
+    path: "meetingWith",
+    select: "name email image",
+  });
+
+  return meetingBookings;
+};
+
 //get meeting with userId by filtering with month and year
 const getMeetingBookingByUserIdAndMonthAndYear = async (
   userId,
@@ -43,24 +75,14 @@ const getMeetingBookingByUserIdAndMonthAndYear = async (
 ) => {
   const meetingBookings = await MeetingBookingsModal.aggregate([
     { $match: { userId: userId, month: month, year: year } },
-    {
-      $project: {
-        _id: 1,
-        startTime: 1,
-        endTime: 1,
-        status: 1,
-        meetingWith: 1,
-        title: 1,
-        description: 1,
-        meetingLink: 1,
-      },
-    },
   ]);
   return meetingBookings;
 };
 
 const meetingBookingServices = {
   createMeetingBookingIntoDB,
+  getMeetingBookingByUserIdAndMonthAndYear,
+  getUserMeetingBookings,
 };
 
 module.exports = meetingBookingServices;

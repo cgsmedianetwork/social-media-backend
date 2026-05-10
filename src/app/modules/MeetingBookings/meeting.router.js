@@ -13,6 +13,12 @@ router.post(
   meetingBookingController.createMeetingBooking,
 );
 
+router.get(
+  "/user-meeting-bookings",
+  authVerification,
+  meetingBookingController.getUserMeetingBookings,
+);
+
 const meetingBookingRouter = router;
 
 module.exports = meetingBookingRouter;

@@ -74,6 +74,12 @@ router.get(
   SocialConnectionController.fetchFollowersLast12Months,
 );
 
+router.get(
+  "/total-followers-by-account",
+  authVerification,
+  SocialConnectionController.fetchTotalFollowersByAccount,
+);
+
 router.delete(
   "/disconnect-account/:provider/:providerId",
   authVerification,

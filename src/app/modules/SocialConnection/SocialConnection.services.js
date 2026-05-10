@@ -7,8 +7,12 @@ const UserModel = require("../user/user.model");
 const { default: axios } = require("axios");
 const facebookClient = require("../../../Helper/facebookClient");
 const instagramClient = require("../../../Helper/instagramClient");
-const { getVideoEngagement } = require("../../../Helper/tiktokClient");
+const {
+  getVideoEngagement,
+  getUserInfo,
+} = require("../../../Helper/tiktokClient");
 const calculateTrend = require("../../../Helper/calculateTrends");
+const getProviderColor = require("../../../Helper/getProviderColor");
 
 // youtube
 function createClient(tokens) {
@@ -1092,6 +1096,79 @@ const fetchFollowersLast12Months = async (userId) => {
   return { accounts, chartData };
 };
 
+const fetchTotalFollowersByAccount = async (userId) => {
+  const userAccount = await UserModel.findById(userId);
+  if (!userAccount) {
+    throw new ErrorHandler("User not found!", httpStatus.NOT_FOUND);
+  }
+  const chartData = [];
+  await Promise.all(
+    userAccount.socialAccounts.map(async (acc) => {
+      try {
+        let count = 0;
+        let accountName = acc.title || acc.meta?.pageName || "Unknown Account";
+        if (acc.provider === "youtube") {
+          const oauth2Client = await ensureYoutubeToken(userId, acc.providerId);
+          if (!oauth2Client) return;
+          const youtube = google.youtube({ version: "v3", auth: oauth2Client });
+          const channelRes = await youtube.channels.list({
+            mine: true,
+            part: "snippet,statistics",
+          });
+          const channel = channelRes.data.items?.[0];
+          count = Number(channel?.statistics?.subscriberCount || 0);
+          accountName = channel?.snippet?.title || accountName;
+        }
+        if (acc.provider === "facebook") {
+          const { data } = await axios.get(
+            `https://graph.facebook.com/${config.facebook.graph_api_version}/${acc.providerId}`,
+            {
+              params: {
+                fields: "name,followers_count,fan_count",
+                access_token: acc.accessToken,
+              },
+            },
+          );
+          count = Number(data?.followers_count || data?.fan_count || 0);
+          accountName = data?.name || accountName;
+        }
+        if (acc.provider === "instagram") {
+          const profile = await instagramClient.getInstagramProfile(
+            acc.providerId,
+            acc.accessToken,
+          );
+          count = Number(profile?.followers_count || 0);
+          accountName = profile?.username || profile?.name || accountName;
+        }
+        if (acc.provider === "tiktok") {
+          const userInfo = await getUserInfo(acc.accessToken);
+          count = Number(
+            userInfo?.follower_count || acc.meta?.followerCount || 0,
+          );
+          accountName = userInfo?.display_name || accountName;
+        }
+        chartData.push({
+          provider: acc.provider,
+          providerId: acc.providerId,
+          accountName,
+          label: accountName,
+          total: count,
+          color: getProviderColor(acc.provider),
+          image: acc.image,
+        });
+      } catch (error) {
+        console.error(`${acc.provider} follower count error:`, error.message);
+      }
+    }),
+  );
+  const total = chartData.reduce((sum, item) => sum + item.total, 0);
+  return {
+    total,
+    accounts: chartData,
+    chartData,
+  };
+};
+
 const SocialConnectionServices = {
   fetchYoutubeInsights,
   ensureYoutubeToken,
@@ -1099,6 +1176,7 @@ const SocialConnectionServices = {
   fetchReachLikeCommentLastTwoMonthsData,
   fetchLast12MonthsChartData,
   fetchFollowersLast12Months,
+  fetchTotalFollowersByAccount,
 };
 
 module.exports = SocialConnectionServices;

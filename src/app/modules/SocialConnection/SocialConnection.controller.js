@@ -526,6 +526,19 @@ const disconnectAccount = catchAsyncError(async (req, res, next) => {
   });
 });
 
+const fetchTotalFollowersByAccount = catchAsyncError(async (req, res, next) => {
+  const id = req.userId;
+
+  const data = await SocialConnectionServices.fetchTotalFollowersByAccount(id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Total followers by platform fetched successfully!",
+    data,
+  });
+});
+
 const SocialConnectionController = {
   youtubeConnect,
   youtubeCallback,
@@ -542,5 +555,6 @@ const SocialConnectionController = {
   tiktokCallback,
   fetchLast12MonthsChartData,
   fetchFollowersLast12Months,
+  fetchTotalFollowersByAccount,
 };
 module.exports = SocialConnectionController;
