@@ -31,7 +31,7 @@ const exchangeCodeForShortToken = async (code) => {
     redirect_uri: config.facebook.redirect_uri,
   });
   const response = await axios.get(
-    `${graphBase}/oauth/access_token?${params.toString()}`
+    `${graphBase}/oauth/access_token?${params.toString()}`,
   );
   return response.data;
 };
@@ -44,14 +44,17 @@ const exchangeForLongLivedUserToken = async (shortToken) => {
     fb_exchange_token: shortToken,
   });
   const response = await axios.get(
-    `${graphBase}/oauth/access_token?${params.toString()}`
+    `${graphBase}/oauth/access_token?${params.toString()}`,
   );
   return response.data;
 };
 
 const getPages = async (longUserToken) => {
   const { data } = await axios.get(`${graphBase}/me/accounts`, {
-    params: { access_token: longUserToken, fields: "id,name,category,access_token,picture.type(large)" },
+    params: {
+      access_token: longUserToken,
+      fields: "id,name,category,access_token,picture.type(large)",
+    },
   });
   return data;
 };
@@ -62,16 +65,8 @@ const getPageInsights = async (
   metrics,
   since,
   until,
-  period = "day"
+  period = "day",
 ) => {
-  // console.log("here i am", pageId, pageToken, metrics, since, until, period);
-  // console.log("INSIGHTS PARAMS", {
-  //   metrics,
-  //   period,
-  //   since,
-  //   until,
-  // });
-  
   // src/Helper/facebookClient.js inside getPageInsights
   try {
     const { data } = await axios.get(`${graphBase}/${pageId}/insights`, {
@@ -85,8 +80,12 @@ const getPageInsights = async (
     });
     return data;
   } catch (err) {
+    console.log("FB insights metrics:", metrics);
     console.error("FB insights error", err.response?.data || err.message);
-    return { data: [] }
+    return {
+      data: [],
+      error: err.response?.data?.error?.message || err.message,
+    };
   }
 };
 
@@ -115,7 +114,7 @@ async function fetchFacebookPostsEngagement(pageId, accessToken, since, until) {
           fields: "reactions.summary(true),comments.summary(true)",
           limit: 100,
         },
-      }
+      },
     );
     // console.log(`Total posts found: ${data?.data?.length || 0}`);
 

@@ -2,11 +2,13 @@ const { default: mongoose } = require("mongoose");
 
 const config = require("./src/config/config");
 const app = require("./index");
+const startAnalyticsCron = require("./src/jobs/AnalyticsCron");
 async function main() {
   try {
     await mongoose.connect(config.database_url);
     console.log("Database connected Successfully!!");
-    console.log("Database connected Successfully!!");
+
+    startAnalyticsCron();
 
     const server = app.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);

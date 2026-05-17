@@ -61,8 +61,8 @@ const userModelSchema = mongoose.Schema(
     },
     badge: {
       type: String,
-      // enum: ["bronze", "silver", "gold", "diamond"],
-      // default: null,
+      enum: ["bronze", "silver", "gold", "diamond"],
+      default: null,
     },
     role: {
       type: String,

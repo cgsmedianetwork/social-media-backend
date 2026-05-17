@@ -1550,6 +1550,98 @@ const totalUserSummaryFromDB = async () => {
   };
 };
 
+const escapeRegex = (value = "") =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getUserListForAdminFromDB = async (query) => {
+  const { searchTerm = "", badge = "", page = 1, limit = 10 } = query;
+
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 15;
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const match = {};
+
+  if (searchTerm) {
+    const regex = new RegExp(escapeRegex(searchTerm), "i");
+
+    match.$or = [{ name: regex }, { email: regex }, { phone: regex }];
+  }
+
+  if (badge && badge !== "all") {
+    match.badge = badge;
+  }
+
+  const [result] = await UserModel.aggregate([
+    { $match: match },
+    {
+      $facet: {
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limitNumber },
+          {
+            $project: {
+              name: 1,
+              email: 1,
+              phone: 1,
+              image: 1,
+              badge: 1,
+              userStatus: 1,
+              createdAt: 1,
+              socialAccounts: {
+                $map: {
+                  input: {
+                    $filter: {
+                      input: "$socialAccounts",
+                      as: "account",
+                      cond: { $eq: ["$$account.linked", true] },
+                    },
+                  },
+                  as: "account",
+                  in: {
+                    provider: "$$account.provider",
+                  },
+                },
+              },
+            },
+          },
+        ],
+        meta: [{ $count: "total" }],
+      },
+    },
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total: result?.meta?.[0]?.total || 0,
+    },
+    data: result?.data || [],
+  };
+};
+
+const updateUserBadgeIntoDB = async (userId, badge) => {
+  const allowedBadges = ["bronze", "silver", "gold", "diamond"];
+
+  if (!allowedBadges.includes(badge)) {
+    throw new ErrorHandler("Invalid badge", httpStatus.BAD_REQUEST);
+  }
+
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    { badge },
+    { new: true, runValidators: true },
+  ).select("name email phone image badge");
+
+  if (!user) {
+    throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
+  }
+
+  return user;
+};
+
 const userServices = {
   getUserUsingPhoneFromDB,
   updateUserProfileIntoDB,
@@ -1571,6 +1663,8 @@ const userServices = {
   getAdminAndSubAdminFromDB,
   verifyRefreshTokenFromDB,
   totalUserSummaryFromDB,
+  getUserListForAdminFromDB,
+  updateUserBadgeIntoDB,
 };
 
 module.exports = userServices;

@@ -110,6 +110,18 @@ router.get(
   userController.getTotalUserSummary,
 );
 
+router.get(
+  "/admin-user-list",
+  authVerification,
+  userController.getUserListForAdmin,
+);
+
+router.patch(
+  "/:userId/badge",
+  authVerification,
+  userController.updateUserBadge,
+);
+
 router.patch(
   "/img-upload",
   authVerification,

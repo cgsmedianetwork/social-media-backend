@@ -511,6 +511,30 @@ const getTotalUserSummary = catchAsyncError(async (req, res) => {
     data: result,
   });
 });
+
+const getUserListForAdmin = catchAsyncError(async (req, res) => {
+  const result = await userServices.getUserListForAdminFromDB(req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User list fetched successfully",
+    data: result,
+  });
+});
+
+const updateUserBadge = catchAsyncError(async (req, res) => {
+  const result = await userServices.updateUserBadgeIntoDB(
+    req.params.userId,
+    req.body.badge,
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User badge updated successfully",
+    data: result,
+  });
+});
+
 const userController = {
   checkUserExistusingPhone,
   loginUserUsingPhoneAndPassword,
@@ -534,5 +558,7 @@ const userController = {
   verifyRefreshToken,
   getAdminAndSubAdmin,
   getTotalUserSummary,
+  getUserListForAdmin,
+  updateUserBadge,
 };
 module.exports = userController;
