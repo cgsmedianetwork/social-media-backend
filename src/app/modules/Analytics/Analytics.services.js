@@ -35,6 +35,10 @@ const monthNames = [
   "Dec",
 ];
 
+const getPreviousMonthStart = (date) => {
+  return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+};
+
 const getMonthRange = (date) => {
   const start = new Date(date.getFullYear(), date.getMonth(), 1);
   const end = new Date(
@@ -99,6 +103,7 @@ const sumMetricValues = (insightsData, metricName) => {
     0,
   );
 };
+
 const buildEmptyMetrics = () => ({
   totalFollowers: null,
   followersGained: null,
@@ -118,6 +123,32 @@ const buildEmptyCapabilities = () => ({
   impressions: false,
   engagement: false,
 });
+
+const calculateFollowersGainedFallback = ({
+  snapshot,
+  account,
+  month,
+  snapshotMap,
+}) => {
+  const apiFollowersGained = snapshot?.metrics?.followersGained;
+  if (apiFollowersGained !== null && apiFollowersGained !== undefined) {
+    return apiFollowersGained;
+  }
+  const currentFollowers = snapshot?.metrics?.totalFollowers;
+  if (currentFollowers === null || currentFollowers === undefined) {
+    return null;
+  }
+  const previousMonthStart = getPreviousMonthStart(month.start);
+  const previousKey = `${account.provider}:${
+    account.providerId
+  }:${previousMonthStart.toISOString()}`;
+  const previousSnapshot = snapshotMap.get(previousKey);
+  const previousFollowers = previousSnapshot?.metrics?.totalFollowers;
+  if (previousFollowers === null || previousFollowers === undefined) {
+    return null;
+  }
+  return Math.max(currentFollowers - previousFollowers, 0);
+};
 
 const getYoutubeMetrics = async (userId, account, month) => {
   const oauth2Client = await SocialConnectionServices.ensureYoutubeToken(
@@ -465,7 +496,7 @@ const getUserAccountAnalytics = async (userId) => {
     (account) => account.linked && account.provider && account.providerId,
   );
   const months = getLastSixMonths();
-  const startDate = months[0].start;
+  const startDate = getPreviousMonthStart(months[0].start);
   const snapshots = await AnalyticsModel.find({
     userId,
     periodType: "month",
@@ -496,7 +527,12 @@ const getUserAccountAnalytics = async (userId) => {
         month: month.label,
         reach: snapshot?.metrics?.reach ?? snapshot?.metrics?.views ?? null,
         engagement: snapshot?.metrics?.engagement ?? null,
-        followersGained: snapshot?.metrics?.followersGained ?? null,
+        followersGained: calculateFollowersGainedFallback({
+          snapshot,
+          account,
+          month,
+          snapshotMap,
+        }),
       };
     });
     return {
