@@ -19,6 +19,30 @@ router.get(
   meetingBookingController.getUserMeetingBookings,
 );
 
+router.post(
+  "/admin/create",
+  authVerification,
+  validateRequest(
+    JoiMeetingValidationSchema.adminMeetingCreateValidationSchema,
+  ),
+  meetingBookingController.createMeetingBookingByAdmin,
+);
+
+router.get(
+  "/admin/bookings",
+  authVerification,
+  meetingBookingController.getAdminMeetingBookings,
+);
+
+router.patch(
+  "/admin/:bookingId/status",
+  authVerification,
+  validateRequest(
+    JoiMeetingValidationSchema.meetingStatusUpdateValidationSchema,
+  ),
+  meetingBookingController.updateMeetingBookingStatus,
+);
+
 const meetingBookingRouter = router;
 
 module.exports = meetingBookingRouter;

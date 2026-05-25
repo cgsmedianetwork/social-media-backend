@@ -37,6 +37,13 @@ const createMeetingBookingIntoDB = async (payload) => {
   return newMeetingBooking;
 };
 
+//create a meeting booking by admin
+const createMeetingBookingByAdminIntoDB = async (adminId, payload) => {
+  payload.meetingWith = adminId;
+  payload.status = payload.status || "confirmed";
+  return createMeetingBookingIntoDB(payload);
+};
+
 //get user meeting bookings
 const getUserMeetingBookings = async (userId, startDate, endDate) => {
   console.log("startDate and endDate", startDate, endDate);
@@ -67,6 +74,22 @@ const getUserMeetingBookings = async (userId, startDate, endDate) => {
   return meetingBookings;
 };
 
+//get admin meeting bookings
+const getAdminMeetingBookings = async (startDate, endDate) => {
+  if (!startDate && !endDate) {
+    startDate = moment().startOf("month").toDate();
+    endDate = moment().endOf("month").toDate();
+  }
+  return MeetingBookingsModal.find({
+    startTime: { $lte: new Date(endDate) },
+    endTime: { $gte: new Date(startDate) },
+    isActive: true,
+  })
+    .populate({ path: "userId", select: "name email phone image" })
+    .populate({ path: "meetingWith", select: "name email phone image" })
+    .sort({ startTime: 1 });
+};
+
 //get meeting with userId by filtering with month and year
 const getMeetingBookingByUserIdAndMonthAndYear = async (
   userId,
@@ -79,10 +102,28 @@ const getMeetingBookingByUserIdAndMonthAndYear = async (
   return meetingBookings;
 };
 
+//update a meeting booking status
+const updateMeetingBookingStatusIntoDB = async (bookingId, status) => {
+  const result = await MeetingBookingsModal.findByIdAndUpdate(
+    bookingId,
+    { status },
+    { new: true, runValidators: true },
+  )
+    .populate({ path: "userId", select: "name email phone image" })
+    .populate({ path: "meetingWith", select: "name email phone image" });
+  if (!result) {
+    throw new ErrorHandler("Meeting booking not found", httpStatus.NOT_FOUND);
+  }
+  return result;
+};
+
 const meetingBookingServices = {
   createMeetingBookingIntoDB,
   getMeetingBookingByUserIdAndMonthAndYear,
   getUserMeetingBookings,
+  createMeetingBookingByAdminIntoDB,
+  getAdminMeetingBookings,
+  updateMeetingBookingStatusIntoDB,
 };
 
 module.exports = meetingBookingServices;

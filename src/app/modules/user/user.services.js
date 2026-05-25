@@ -1553,14 +1553,14 @@ const totalUserSummaryFromDB = async () => {
 const escapeRegex = (value = "") =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const getUserListForAdminFromDB = async (query) => {
+const getUserListForAdminFromDB = async (query, adminId) => {
   const { searchTerm = "", badge = "", page = 1, limit = 10 } = query;
 
   const pageNumber = Number(page) || 1;
   const limitNumber = Number(limit) || 15;
   const skip = (pageNumber - 1) * limitNumber;
 
-  const match = {};
+  const match = { _id: { $ne: new mongoose.Types.ObjectId(adminId) } };
 
   if (searchTerm) {
     const regex = new RegExp(escapeRegex(searchTerm), "i");

@@ -513,7 +513,10 @@ const getTotalUserSummary = catchAsyncError(async (req, res) => {
 });
 
 const getUserListForAdmin = catchAsyncError(async (req, res) => {
-  const result = await userServices.getUserListForAdminFromDB(req.query);
+  const result = await userServices.getUserListForAdminFromDB(
+    req.query,
+    req.userId,
+  );
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

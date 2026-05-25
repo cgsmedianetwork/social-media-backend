@@ -21,27 +21,29 @@ const meetingCreateValidationSchema = Joi.object({
   isActive: Joi.boolean().default(true),
 });
 
-const meetingUpdateValidationSchema = Joi.object({
-  meetingWith: Joi.string().trim().allow("", null),
+const adminMeetingCreateValidationSchema = Joi.object({
+  userId: Joi.string().required(),
   title: Joi.string().trim().allow("", null),
-  startTime: Joi.date().optional().messages({
-    "date.base": "Start time must be a valid date",
-  }),
-  endTime: Joi.date().optional().messages({
-    "date.base": "End time must be a valid date",
-  }),
+  date: Joi.date().required(),
+  startTime: Joi.date().required(),
+  endTime: Joi.date().required(),
   status: Joi.string()
-    .trim()
-    .valid("pending", "confirmed", "rejected")
-    .allow("", null),
+    .valid("pending", "confirmed", "rejected", "completed")
+    .default("confirmed"),
   meetingLink: Joi.string().trim().allow("", null),
   description: Joi.string().trim().allow("", null),
-  isActive: Joi.boolean(),
+});
+
+const meetingStatusUpdateValidationSchema = Joi.object({
+  status: Joi.string()
+    .valid("pending", "confirmed", "rejected", "completed")
+    .required(),
 });
 
 const JoiMeetingValidationSchema = {
   meetingCreateValidationSchema,
-  meetingUpdateValidationSchema,
+  adminMeetingCreateValidationSchema,
+  meetingStatusUpdateValidationSchema,
 };
 
 module.exports = JoiMeetingValidationSchema;
