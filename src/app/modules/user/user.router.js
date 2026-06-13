@@ -90,6 +90,19 @@ router.get(
   userController.getAdminAndSubAdmin,
 );
 
+router.get("/sub-admin-list", authVerification, userController.getSubAdminList);
+
+router.patch(
+  "/assign-sub-admin",
+  authVerification,
+  userController.assignSubAdmin,
+);
+router.patch(
+  "/:userId/remove-sub-admin",
+  authVerification,
+  userController.removeSubAdmin,
+);
+
 router.post(
   "/create",
   validateRequest(JoiUserValidationSchema.userCreateSchema),

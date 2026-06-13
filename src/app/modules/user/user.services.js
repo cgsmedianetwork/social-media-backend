@@ -23,14 +23,26 @@ const calculateTrend = require("../../../Helper/calculateTrends");
 
 const sendSignUpInitOTP = async (payload) => {
   const { phone, email, password, terms } = payload;
-
-  const isExist = await UserModel.findOne({ phone });
-  if (isExist) {
+  //want to check is exist both with phone and email
+  // const isExist = await UserModel.findOne({ phone });
+  const phoneUser = await UserModel.findOne({ phone });
+  if (phoneUser) {
     throw new ErrorHandler(
-      `This Phone Number is Already Exist!`,
+      "Account with this Phone Number is Already Exist!",
       httpStatus.CONFLICT,
     );
   }
+
+  if (email) {
+    const emailUser = await UserModel.findOne({ email });
+    if (emailUser) {
+      throw new ErrorHandler(
+        "Account with this Email is Already Exist!",
+        httpStatus.CONFLICT,
+      );
+    }
+  }
+
   const isExistPendingUser = await PendingUserModel.findOne({ phone });
   const passwordHash = await bcrypt.hash(password, 10);
   const code = await uuidv4();
@@ -42,8 +54,7 @@ const sendSignUpInitOTP = async (payload) => {
   const requestPayload = {
     userNumber: phone,
     otpType,
-    otpMassage:
-      "Your One Time Password For signup. This OTP is valid for 5 minutes.",
+    // otpMassage: `This OTP is valid for 5 minutes.`,
   };
 
   // checking payload validation
@@ -137,8 +148,7 @@ const resendSignUpInitOTP = async (sessionId) => {
   const requestPayload = {
     userNumber: phone,
     otpType,
-    otpMassage:
-      "Your One Time Password For signup. This OTP is valid for 5 minutes.",
+    otpMassage: "",
   };
 
   // checking payload validation
@@ -381,6 +391,17 @@ const updateUserIntoDB = async (userId, payload) => {
   if (!isUserExist) {
     throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
   }
+
+  if (payload.email) {
+    const existingEmail = await UserModel.findOne({
+      email: payload.email,
+      _id: { $ne: userId },
+    });
+    if (existingEmail) {
+      throw new ErrorHandler("Email already exists", httpStatus.CONFLICT);
+    }
+  }
+
   const result = await UserModel.findByIdAndUpdate(userId, payload, {
     new: true,
   });
@@ -710,7 +731,6 @@ const getUserHourlyFromDB = async () => {
 //     data: result,
 //   };
 // };
-
 const loggedInUserFromDB = async (userID) => {
   const user = await UserModel.findById(userID);
   if (!user) {
@@ -1622,6 +1642,54 @@ const getUserListForAdminFromDB = async (query, adminId) => {
   };
 };
 
+const getSubAdminListFromDB = async (query) => {
+  const { searchTerm = "", page = 1, limit = 10 } = query;
+
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 10;
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const match = { role: "subAdmin" };
+
+  if (searchTerm) {
+    const regex = new RegExp(escapeRegex(searchTerm), "i");
+    match.$or = [{ name: regex }, { email: regex }, { phone: regex }];
+  }
+
+  const [result] = await UserModel.aggregate([
+    { $match: match },
+    {
+      $facet: {
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limitNumber },
+          {
+            $project: {
+              name: 1,
+              email: 1,
+              phone: 1,
+              image: 1,
+              role: 1,
+              createdAt: 1,
+            },
+          },
+        ],
+        meta: [{ $count: "total" }],
+      },
+    },
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total: result?.meta?.[0]?.total || 0,
+    },
+    data: result?.data || [],
+  };
+};
+
 const updateUserBadgeIntoDB = async (userId, badge) => {
   const allowedBadges = ["bronze", "silver", "gold", "diamond"];
 
@@ -1639,6 +1707,49 @@ const updateUserBadgeIntoDB = async (userId, badge) => {
     throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
   }
 
+  return user;
+};
+
+const assignSubAdminIntoDB = async (userId) => {
+  if (!userId) {
+    throw new ErrorHandler("User not found!", httpStatus.BAD_REQUEST);
+  }
+  const user = await UserModel.findById(userId);
+
+  if (!user) {
+    throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
+  }
+  if (user.role === "admin") {
+    throw new ErrorHandler(
+      "Admin account cannot be assigned as sub-admin",
+      httpStatus.BAD_REQUEST,
+    );
+  }
+  if (user.role === "subAdmin") {
+    throw new ErrorHandler(
+      "This account is already a sub-admin",
+      httpStatus.CONFLICT,
+    );
+  }
+  user.role = "subAdmin";
+  await user.save();
+  return user;
+};
+
+const removeSubAdminIntoDB = async (adminUser, userId) => {
+  // assertAdmin(adminUser);
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
+  }
+  if (user.role !== "subAdmin") {
+    throw new ErrorHandler(
+      "This user is not a sub-admin",
+      httpStatus.BAD_REQUEST,
+    );
+  }
+  user.role = "user";
+  await user.save();
   return user;
 };
 
@@ -1665,6 +1776,9 @@ const userServices = {
   totalUserSummaryFromDB,
   getUserListForAdminFromDB,
   updateUserBadgeIntoDB,
+  getSubAdminListFromDB,
+  assignSubAdminIntoDB,
+  removeSubAdminIntoDB,
 };
 
 module.exports = userServices;

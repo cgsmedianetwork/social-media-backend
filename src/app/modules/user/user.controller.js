@@ -12,10 +12,19 @@ const httpStatus = require("http-status");
 const { v4: uuidv4 } = require("uuid");
 const ResetPasswordSession = require("../ResetPasswordSession/ResetPasswordSession.model");
 
+const assertAdmin = (user) => {
+  if (user?.role !== "admin") {
+    throw new ErrorHandler(
+      "Only admin can manage sub-admins",
+      httpStatus.FORBIDDEN,
+    );
+  }
+};
+
 const sendSignUpInitOTP = catchAsyncError(async (req, res, next) => {
   const result = await userServices.sendSignUpInitOTP(req.body);
 
-  console.log(result);
+  // console.log(result);
 
   if (result.sendOTP) {
     await passwordRefServices.collectRef({
@@ -252,7 +261,7 @@ const refreshToken = catchAsyncError(async (req, res) => {
 const updateUser = catchAsyncError(async (req, res) => {
   const userId = req.userId;
   const payload = req.body;
-  console.log(userId, payload);
+  // console.log(userId, payload);
   const result = await userServices.updateUserIntoDB(userId, payload);
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -525,6 +534,17 @@ const getUserListForAdmin = catchAsyncError(async (req, res) => {
   });
 });
 
+const getSubAdminList = catchAsyncError(async (req, res) => {
+  const result = await userServices.getSubAdminListFromDB(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Sub-admin list fetched successfully",
+    data: result,
+  });
+});
+
 const updateUserBadge = catchAsyncError(async (req, res) => {
   const result = await userServices.updateUserBadgeIntoDB(
     req.params.userId,
@@ -534,6 +554,31 @@ const updateUserBadge = catchAsyncError(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "User badge updated successfully",
+    data: result,
+  });
+});
+
+const assignSubAdmin = catchAsyncError(async (req, res) => {
+  assertAdmin(req.user);
+  const result = await userServices.assignSubAdminIntoDB(req.body.userId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Sub-admin assigned successfully",
+    data: result,
+  });
+});
+
+const removeSubAdmin = catchAsyncError(async (req, res) => {
+  assertAdmin(req.user);
+  const result = await userServices.removeSubAdminIntoDB(
+    req.user,
+    req.params.userId,
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Sub-admin removed successfully",
     data: result,
   });
 });
@@ -563,5 +608,8 @@ const userController = {
   getTotalUserSummary,
   getUserListForAdmin,
   updateUserBadge,
+  getSubAdminList,
+  assignSubAdmin,
+  removeSubAdmin,
 };
 module.exports = userController;

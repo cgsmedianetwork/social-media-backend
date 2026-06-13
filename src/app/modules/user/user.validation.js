@@ -10,14 +10,12 @@ const signupInitSchema = Joi.object({
         return value;
       } else {
         return helpers.message(
-          "Invalid Bangladeshi phone number format or length"
+          "Invalid Bangladeshi phone number format or length",
         );
       }
     }, "Phone Number Validation"),
-  email: Joi.string().email().required().messages({
-    "string.email": "Email is required",
-    "string.empty": "Email is required",
-    "any.required": "Email is required",
+  email: Joi.string().email().optional().allow("", null).messages({
+    "string.email": "Please provide a valid email",
   }),
   terms: Joi.boolean().messages({
     "boolean.base": "Terms must be a boolean",
@@ -37,7 +35,7 @@ const loginSchema = Joi.object({
         return value;
       } else {
         return helpers.message(
-          "Invalid Bangladeshi phone number format or length"
+          "Invalid Bangladeshi phone number format or length",
         );
       }
     }, "Phone Number Validation"),
@@ -56,7 +54,7 @@ const phoneNumberOTPSchema = Joi.object({
         return value;
       } else {
         return helpers.message(
-          "Invalid Bangladeshi phone number format or length"
+          "Invalid Bangladeshi phone number format or length",
         );
       }
     }, "Phone Number Validation"),
@@ -70,7 +68,7 @@ const phoneNumberRequiredSchema = Joi.object({
         return value;
       } else {
         return helpers.message(
-          "Invalid Bangladeshi phone number format or length"
+          "Invalid Bangladeshi phone number format or length",
         );
       }
     }, "Phone Number Validation"),
@@ -110,7 +108,7 @@ const userCreateSchema = Joi.object({
         return value;
       } else {
         return helpers.message(
-          "Invalid Bangladeshi phone number format or length"
+          "Invalid Bangladeshi phone number format or length",
         );
       }
     }, "Phone Number Validation"),
@@ -149,7 +147,7 @@ const phoneOTPVarificationSchema = Joi.object({
   userEmail: Joi.string().email().messages({
     "string.email": "User email must be a valid email address.",
   }),
-  otpMassage: Joi.string().required().messages({
+  otpMassage: Joi.string().optional().allow("").messages({
     "string.empty": "otpMassage cannot be empty",
   }),
 });

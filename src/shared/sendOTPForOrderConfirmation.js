@@ -11,11 +11,15 @@ exports.sendOTPForOrderConfirmation = async (toNumber, message) => {
       {
         toNumber,
         message,
-      }
+      },
     );
 
+    console.log("OTP send response :", response);
+
     if (response?.response_code === 202) {
-      // console.log("OTP send Successfully");
+      console.log("OTP send Successfully");
+    } else {
+      console.log("OTP send Failed");
     }
 
     return { status: true, response };
