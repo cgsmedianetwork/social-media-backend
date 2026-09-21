@@ -1580,7 +1580,7 @@ const getUserListForAdminFromDB = async (query, adminId) => {
   const limitNumber = Number(limit) || 15;
   const skip = (pageNumber - 1) * limitNumber;
 
-  const match = { _id: { $ne: new mongoose.Types.ObjectId(adminId) } };
+  const match = {};
 
   if (searchTerm) {
     const regex = new RegExp(escapeRegex(searchTerm), "i");
@@ -1640,6 +1640,49 @@ const getUserListForAdminFromDB = async (query, adminId) => {
     },
     data: result?.data || [],
   };
+};
+
+const getUserDetailsForAdminFromDB = async (userId) => {
+  console.log("userId", userId);
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ErrorHandler("Invalid user id", httpStatus.BAD_REQUEST);
+  }
+
+  const [user] = await UserModel.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+    {
+      $project: {
+        name: 1,
+        email: 1,
+        phone: 1,
+        image: 1,
+        badge: 1,
+        userStatus: 1,
+        createdAt: 1,
+        socialAccounts: {
+          $map: {
+            input: {
+              $filter: {
+                input: "$socialAccounts",
+                as: "account",
+                cond: { $eq: ["$$account.linked", true] },
+              },
+            },
+            as: "account",
+            in: {
+              provider: "$$account.provider",
+            },
+          },
+        },
+      },
+    },
+  ]);
+
+  if (!user) {
+    throw new ErrorHandler("User not found", httpStatus.NOT_FOUND);
+  }
+
+  return user;
 };
 
 const getSubAdminListFromDB = async (query) => {
@@ -1778,6 +1821,7 @@ const userServices = {
   updateUserBadgeIntoDB,
   getSubAdminListFromDB,
   assignSubAdminIntoDB,
+  getUserDetailsForAdminFromDB,
   removeSubAdminIntoDB,
 };
 

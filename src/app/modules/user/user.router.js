@@ -129,6 +129,12 @@ router.get(
   userController.getUserListForAdmin,
 );
 
+router.get(
+  "/admin-user/:userId",
+  authVerification,
+  userController.getUserDetailsForAdmin,
+);
+
 router.patch(
   "/:userId/badge",
   authVerification,

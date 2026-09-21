@@ -526,10 +526,28 @@ const getUserListForAdmin = catchAsyncError(async (req, res) => {
     req.query,
     req.userId,
   );
+  // console.log(result);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "User list fetched successfully",
+    data: result,
+  });
+});
+
+const getUserDetailsForAdmin = catchAsyncError(async (req, res) => {
+  if (!["admin", "subAdmin"].includes(req.user?.role)) {
+    throw new ErrorHandler("Forbidden", httpStatus.FORBIDDEN);
+  }
+
+  const result = await userServices.getUserDetailsForAdminFromDB(
+    req.params.userId,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User details fetched successfully",
     data: result,
   });
 });
@@ -611,5 +629,6 @@ const userController = {
   getSubAdminList,
   assignSubAdmin,
   removeSubAdmin,
+  getUserDetailsForAdmin,
 };
 module.exports = userController;

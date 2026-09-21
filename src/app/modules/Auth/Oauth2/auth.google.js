@@ -42,8 +42,8 @@ passport.use(
         console.error(`Error: ${error}`);
         return done(error, false);
       }
-    }
-  )
+    },
+  ),
 );
 
 passport.serializeUser((user, done) => {
