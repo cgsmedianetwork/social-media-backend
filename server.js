@@ -3,9 +3,22 @@ const { default: mongoose } = require("mongoose");
 const config = require("./src/config/config");
 const app = require("./index");
 const startAnalyticsCron = require("./src/jobs/AnalyticsCron");
+
+// Vercel runs this file as a serverless function. It sets the VERCEL variable.
+const isServerless = Boolean(process.env.VERCEL);
+
+// Hold one connection promise, so a warm function reuses the open connection.
+let connection = null;
+const connectDatabase = () => {
+  if (!connection) {
+    connection = mongoose.connect(config.database_url);
+  }
+  return connection;
+};
+
 async function main() {
   try {
-    await mongoose.connect(config.database_url);
+    await connectDatabase();
     console.log("Database connected Successfully!!");
 
     startAnalyticsCron();
@@ -39,8 +52,17 @@ async function main() {
     });
   } catch (error) {
     console.log(`Database connected Failed!! the issue is ${error}`);
-    console.log(`Database connected Failed!! the issue is ${error}`);
   }
 }
 
-main();
+if (isServerless) {
+  // Do not listen on a port. Vercel passes each request to the exported app.
+  // Mongoose queues queries until the connection opens, so no await is needed.
+  connectDatabase().catch((error) => {
+    console.log(`Database connected Failed!! the issue is ${error}`);
+  });
+} else {
+  main();
+}
+
+module.exports = app;
