@@ -1,12 +1,14 @@
 const axios = require("axios");
 const config = require("../config/config");
 
-// BulkSMSBD expects a number in international form, such as 8801766069458.
+// BulkSMSBD expects a number in international form: 880 and then the ten
+// digit number, such as 8801766069458 for the local number 01766069458.
 const toInternational = (number) => {
   const digits = String(number || "").replace(/\D/g, "");
-  if (digits.startsWith("88")) return digits;
-  if (digits.startsWith("0")) return `88${digits.slice(1)}`;
-  return `88${digits}`;
+  if (digits.startsWith("880")) return digits;
+  if (digits.startsWith("0")) return `88${digits}`;
+  if (digits.startsWith("1")) return `880${digits}`;
+  return digits;
 };
 
 exports.sendOTPForOrderConfirmation = async (toNumber, message) => {
