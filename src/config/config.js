@@ -68,7 +68,13 @@ module.exports = {
   googleClientID: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   googleCallbackURL: process.env.CALL_BACK_URL,
-  origin: process.env.ORIGIN,
+  // ORIGIN may hold several domains, separated by commas. A redirect needs one
+  // address, so take the first entry. The CORS list reads the whole variable.
+  origin: (process.env.ORIGIN || "")
+    .split(",")[0]
+    .trim()
+    .replace(/\/$/, ""),
+  allowedOrigins: process.env.ORIGIN,
   imageServerURL: process.env.IMAGE_SERVER_URL,
   bulksmsbdApiKey: process.env.BULK_SMS_BD_API_KEY,
   bulksmsbdSenderId: process.env.BULK_SMS_BD_SENDER_ID,

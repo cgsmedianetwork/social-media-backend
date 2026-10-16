@@ -1,7 +1,7 @@
 const config = require("../config/config");
 
 // ORIGIN holds one domain, or several domains separated by commas.
-const originsFromEnv = (config.origin || "")
+const originsFromEnv = (config.allowedOrigins || "")
   .split(",")
   .map((origin) => origin.trim().replace(/\/$/, ""))
   .filter(Boolean);
