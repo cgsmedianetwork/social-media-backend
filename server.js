@@ -11,7 +11,13 @@ const isServerless = Boolean(process.env.VERCEL);
 let connection = null;
 const connectDatabase = () => {
   if (!connection) {
-    connection = mongoose.connect(config.database_url);
+    connection = mongoose
+      .connect(config.database_url, { serverSelectionTimeoutMS: 20000 })
+      .catch((error) => {
+        // Drop the failed promise, so the next request tries again.
+        connection = null;
+        throw error;
+      });
   }
   return connection;
 };
@@ -56,8 +62,7 @@ async function main() {
 }
 
 if (isServerless) {
-  // Do not listen on a port. Vercel passes each request to the exported app.
-  // Mongoose queues queries until the connection opens, so no await is needed.
+  // Open the connection as the function starts, to shorten the first request.
   connectDatabase().catch((error) => {
     console.log(`Database connected Failed!! the issue is ${error}`);
   });
@@ -65,4 +70,19 @@ if (isServerless) {
   main();
 }
 
-module.exports = app;
+// Vercel calls this handler for every request. Wait for the database first,
+// because a query that starts too early sits in a queue and times out.
+const handler = async (req, res) => {
+  try {
+    await connectDatabase();
+  } catch (error) {
+    console.log(`Database connected Failed!! the issue is ${error}`);
+    return res.status(503).json({
+      success: false,
+      message: "The database is unavailable. Please try again.",
+    });
+  }
+  return app(req, res);
+};
+
+module.exports = isServerless ? handler : app;
